@@ -1,0 +1,18 @@
+# macOS
+.DS_Store
+
+# Editor files
+.idea/
+.vscode/
+!.vscode/extensions.json
+
+# Backend build artifacts
+backend/bin/
+backend/dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+coverage.out

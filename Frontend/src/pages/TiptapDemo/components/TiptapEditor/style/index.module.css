@@ -1,0 +1,62 @@
+.wrapper {
+  position: relative;
+}
+
+.loading {
+  border: 1px solid #d7deed;
+  border-radius: 12px;
+  padding: 14px;
+  color: #556788;
+  background: #f8faff;
+}
+
+.editor {
+  border: 1px solid #d7deed;
+  border-radius: 12px;
+  padding: 16px;
+  background: #ffffff;
+}
+
+.editor :global(.ProseMirror) {
+  min-height: 320px;
+  outline: none;
+  color: #122242;
+  line-height: 1.7;
+}
+
+.editor :global(.ProseMirror > * + *) {
+  margin-top: 0.8em;
+}
+
+.editor :global(.ProseMirror h2) {
+  margin: 0;
+  color: #153776;
+}
+
+.editor :global(.ProseMirror blockquote) {
+  margin: 0;
+  border-left: 3px solid #9ab8f2;
+  padding-left: 12px;
+  color: #38568f;
+}
+
+.dragHandle {
+  z-index: 2;
+}
+
+.dragButton {
+  width: 24px;
+  height: 24px;
+  border: 1px solid #c1d4fa;
+  border-radius: 6px;
+  background: #edf4ff;
+  color: #274a87;
+  cursor: grab;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dragButton:active {
+  cursor: grabbing;
+}
