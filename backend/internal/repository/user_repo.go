@@ -3,7 +3,10 @@ package repository
 import (
 	"context"
 	"errors"
+	"time"
+
 	"research/internal/domain"
+
 	"gorm.io/gorm"
 )
 
@@ -16,15 +19,63 @@ func NewUserRepository(db *gorm.DB) domain.UserRepository {
 	return &userRepo{db: db}
 }
 
-func (r *userRepo) GetByUsername(ctx context.Context, username string) (*domain.User, error) {
+func (r *userRepo) GetByID(ctx context.Context, id uint) (*domain.User, error) {
 	var user domain.User
-	// 注意 WithContext(ctx)
-	err := r.db.WithContext(ctx).Where("username = ?", username).First(&user).Error
+	err := r.db.WithContext(ctx).First(&user, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("用户不存在")
+			return nil, domain.ErrUserNotFound
 		}
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (r *userRepo) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
+	var user domain.User
+	err := r.db.WithContext(ctx).Where("email = ?", email).First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domain.ErrUserNotFound
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *userRepo) Create(ctx context.Context, user *domain.User) error {
+	return r.db.WithContext(ctx).Create(user).Error
+}
+
+func (r *userRepo) UpdatePasswordHash(ctx context.Context, userID uint, passwordHash string) error {
+	return r.db.WithContext(ctx).
+		Model(&domain.User{}).
+		Where("id = ?", userID).
+		Update("password_hash", passwordHash).
+		Error
+}
+
+func (r *userRepo) UpdateProfile(ctx context.Context, user *domain.User) error {
+	return r.db.WithContext(ctx).
+		Model(&domain.User{}).
+		Where("id = ?", user.ID).
+		Updates(map[string]any{
+			"username":           user.Username,
+			"email":              user.Email,
+			"organization":       user.Organization,
+			"avatar_url":         user.AvatarURL,
+			"signature":          user.Signature,
+			"professional_title": user.ProfessionalTitle,
+			"supervisor":         user.Supervisor,
+			"display_name":       user.DisplayName,
+		}).
+		Error
+}
+
+func (r *userRepo) UpdateLastLoginAt(ctx context.Context, userID uint, lastLoginAt time.Time) error {
+	return r.db.WithContext(ctx).
+		Model(&domain.User{}).
+		Where("id = ?", userID).
+		Update("last_login_at", lastLoginAt).
+		Error
 }

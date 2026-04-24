@@ -89,7 +89,7 @@
 
 ```json
 {
-  "username": "alice",
+  "email": "alice@example.com",
   "password": "123456"
 }
 ```
@@ -106,6 +106,12 @@
     "user": {
       "id": 1,
       "username": "alice",
+      "email": "alice@example.com",
+      "organization": "智能计算实验室",
+      "avatarUrl": "https://example.com/avatars/alice.png",
+      "signature": "专注科研文档协作与知识管理",
+      "professionalTitle": "researcher",
+      "supervisor": "张教授",
       "displayName": "Alice"
     }
   }
@@ -118,7 +124,99 @@
 - 路径：`/api/v1/auth/me`
 - 权限：`login`
 
-### 3.3 退出登录
+### 3.3 注册账号
+
+- 方法：`POST`
+- 路径：`/api/v1/auth/register`
+- 权限：`public`
+
+请求体示例：
+
+```json
+{
+  "username": "alice",
+  "email": "alice@example.com",
+  "password": "123456",
+  "organization": "智能计算实验室",
+  "avatar_url": "https://example.com/avatars/alice.png",
+  "signature": "专注科研文档协作与知识管理",
+  "professional_title": "researcher",
+  "supervisor": "张教授"
+}
+```
+
+响应体示例：
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "message": "注册成功"
+  }
+}
+```
+
+### 3.4 修改密码
+
+- 方法：`PUT`
+- 路径：`/api/v1/auth/password`
+- 权限：`login`
+
+请求体示例：
+
+```json
+{
+  "old_password": "123456",
+  "new_password": "new123456"
+}
+```
+
+响应体示例：
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "message": "密码修改成功"
+  }
+}
+```
+
+### 3.5 修改个人信息
+
+- 方法：`PUT`
+- 路径：`/api/v1/auth/profile`
+- 权限：`login`
+
+请求体示例：
+
+```json
+{
+  "username": "alice",
+  "email": "alice@example.com",
+  "organization": "智能计算实验室",
+  "avatar_url": "https://example.com/avatars/alice.png",
+  "signature": "专注科研文档协作与知识管理",
+  "professional_title": "researcher",
+  "supervisor": "张教授"
+}
+```
+
+响应体示例：
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "message": "个人信息修改成功"
+  }
+}
+```
+
+### 3.6 退出登录
 
 - 方法：`POST`
 - 路径：`/api/v1/auth/logout`

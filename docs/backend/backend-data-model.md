@@ -47,8 +47,13 @@
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
 | id | bigint | 主键 |
-| username | varchar(64) | 登录名，唯一 |
+| username | varchar(64) | 用户名或展示名，非唯一 |
 | email | varchar(128) | 邮箱，唯一 |
+| organization | varchar(128) | 所属组织、实验室或课题组 |
+| avatar_url | varchar(255) | 用户头像 URL |
+| signature | varchar(255) | 个性签名 |
+| professional_title | varchar(32) | 职称枚举 |
+| supervisor | varchar(64) | 上级、导师或负责人名称 |
 | password_hash | varchar(255) | 密码哈希 |
 | display_name | varchar(64) | 展示名称 |
 | status | varchar(32) | 用户状态，例如 active、disabled |
@@ -60,6 +65,7 @@
 
 - 不保存明文密码。
 - 如果后续接入单点登录，可将密码字段改为可空。
+- `professional_title` 建议取值：`professor`、`associate_professor`、`lecturer`、`researcher`、`engineer`、`doctoral_student`、`master_student`、`other`。
 
 ### 4.2 roles
 
@@ -381,7 +387,6 @@ documents
 
 至少建议建立以下索引：
 
-- `users.username` 唯一索引
 - `users.email` 唯一索引
 - `groups.code` 唯一索引
 - `projects.code` 唯一索引

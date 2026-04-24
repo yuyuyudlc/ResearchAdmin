@@ -6,6 +6,10 @@
 .vscode/
 !.vscode/extensions.json
 
+# Local environment
+.env
+backend/.env
+
 # Backend build artifacts
 backend/bin/
 backend/dist/
