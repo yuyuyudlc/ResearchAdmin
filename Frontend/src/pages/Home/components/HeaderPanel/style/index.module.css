@@ -1,0 +1,75 @@
+.section {
+  display: grid;
+  gap: 20px;
+  padding: 28px;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid #d8e5f2;
+}
+
+.meta {
+  display: grid;
+  gap: 8px;
+}
+
+.title {
+  margin: 0 !important;
+  color: #143853 !important;
+}
+
+.subtitle {
+  margin: 0 !important;
+  color: #4b6780 !important;
+}
+
+.controls {
+  display: grid;
+  gap: 16px;
+}
+
+.search {
+  width: min(360px, 72vw);
+}
+
+.select {
+  width: 140px;
+}
+
+.userPanel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.userInfo {
+  display: grid;
+  min-width: 120px;
+  margin-right: auto;
+}
+
+.name {
+  color: #12324a;
+  font-weight: 600;
+}
+
+.org {
+  color: #5c7a91;
+  font-size: 12px;
+}
+
+.scenarioSelect {
+  width: 160px;
+}
+
+@media (max-width: 900px) {
+  .section {
+    padding: 20px;
+  }
+
+  .userPanel {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+}

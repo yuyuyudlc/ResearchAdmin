@@ -1,0 +1,35 @@
+.section {
+  padding: 24px;
+  border: 1px solid #d6e3f0;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.head {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.title {
+  margin: 0 !important;
+}
+
+.item {
+  display: grid;
+  gap: 8px;
+  padding-inline: 2px !important;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}

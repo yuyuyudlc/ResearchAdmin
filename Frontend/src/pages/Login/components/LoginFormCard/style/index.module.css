@@ -1,0 +1,33 @@
+.card {
+  width: min(440px, 100%);
+  padding: 40px 34px;
+  border: 1px solid #d6e4f2;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+}
+
+.head {
+  margin-bottom: 20px;
+}
+
+.title {
+  margin-bottom: 8px !important;
+  color: #113b57 !important;
+  line-height: 1.2 !important;
+}
+
+.subtitle {
+  margin: 0 !important;
+  color: #4a667d !important;
+}
+
+.submit {
+  margin-top: 26px;
+  margin-bottom: 12px !important;
+}
+
+.hint {
+  color: #6a8397;
+  font-size: 12px;
+}

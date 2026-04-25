@@ -1,0 +1,8 @@
+.wrap {
+  display: grid;
+  gap: 14px;
+}
+
+.desc {
+  margin-top: 10px;
+}

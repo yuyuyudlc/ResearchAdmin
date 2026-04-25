@@ -1,0 +1,43 @@
+.page {
+  min-height: 100vh;
+  padding: 24px 20px 30px;
+  background: linear-gradient(180deg, #eef5fc 0%, #f8fbff 100%);
+}
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: grid;
+  gap: 14px;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.title {
+  margin: 0 10px 0 0 !important;
+  color: #143853 !important;
+}
+
+.card {
+  margin-top: 14px;
+}
+
+.shareInput {
+  width: 100%;
+}
+
+.shareList {
+  margin-top: 12px;
+}
+
+.tips {
+  margin: 0;
+  padding-left: 18px;
+  color: #395a72;
+  line-height: 1.9;
+}
