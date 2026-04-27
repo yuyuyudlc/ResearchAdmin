@@ -68,14 +68,19 @@
 
 决议规则：
 
-- 先合并个人与群组权限（按位或）。
-- 若命中 `DENY` 位则直接拒绝（`403`）。
+- 文档拥有者天然视为 `7`（`READ | EDIT | MANAGE`），不受 `DENY` 影响。
+- `workspace` 的 `owner` 天然视为 `7`（`READ | EDIT | MANAGE`），不受 `DENY` 影响。
+- `workspace` 的 `member` 默认视为 `3`（`READ | EDIT`）。
+- `doc_acl` 只保存文档级例外规则，不保存 `workspace` 默认权限。
+- 对普通成员、外部用户和 public 访问者，若命中 `DENY` 位则最终权限为 `0`。
 - 若最终权限为 `0`，视为隐式不可见。
 
 补充约定：
 
-- `owner`：文档拥有者，天然视为 `7`（`READ | EDIT | MANAGE`）。
-- `admin`：系统管理员权限（系统级），不等同于文档 `owner`。
+- `workspace owner`：空间管理者，来自 `workspace_members.role = owner`。
+- `workspace member`：空间普通成员，来自 `workspace_members.role = member`。
+- `document owner`：文档创建者 / 拥有者，来自 `documents.owner_user_id`。
+- `admin`：系统管理员权限（系统级），不等同于 `workspace owner` 或 `document owner`。
 
 ## 3. 认证接口
 
@@ -226,7 +231,7 @@
 
 - 如果只使用无状态 JWT，该接口可仅用于前端语义化退出和刷新服务端审计记录。
 
-## 4. 用户与用户组接口
+## 4. 用户接口
 
 ### 4.1 获取用户列表
 
@@ -239,286 +244,536 @@
 - 共享弹窗搜索可授权用户
 - 管理端用户管理
 
-### 4.2 获取用户组列表
+说明：
 
-- 方法：`GET`
-- 路径：`/api/v1/groups`
-- 权限：`login`
+- 文档 ACL 主体只支持 `user` 和 `public`，不支持用户组授权。
 
-### 4.3 创建用户组
+## 5. Workspace 接口
+
+### 5.1 创建 Workspace
 
 - 方法：`POST`
-- 路径：`/api/v1/groups`
-- 权限：`admin`
-
-### 4.4 更新用户组成员
-
-- 方法：`PUT`
-- 路径：`/api/v1/groups/:groupId/members`
-- 权限：`admin`
+- 路径：`/api/v1/workspaces`
+- 权限：`login`
 
 请求体示例：
 
 ```json
 {
-  "userIds": [1, 2, 3]
+  "name": "研发空间",
+  "description": "项目资料"
 }
 ```
 
-## 5. 项目接口
+处理要求：
 
-### 5.1 获取项目列表
+- 创建 `workspaces` 记录。
+- 创建 `workspace_members` 记录，当前用户角色为 `owner`。
+- 返回 workspace 基础信息。
+
+响应体示例：
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "id": "workspace-1",
+    "name": "研发空间",
+    "description": "项目资料",
+    "ownerUserId": "user-1",
+    "status": "active",
+    "createdAt": "2026-04-27T10:00:00Z",
+    "updatedAt": "2026-04-27T10:00:00Z"
+  }
+}
+```
+
+### 5.2 获取 Workspace 列表
 
 - 方法：`GET`
-- 路径：`/api/v1/projects`
+- 路径：`/api/v1/workspaces`
 - 权限：`login`
 
-### 5.2 创建项目
+用途：
 
-- 方法：`POST`
-- 路径：`/api/v1/projects`
-- 权限：`admin`
+- 获取当前用户加入的 workspace 列表。
+- 不返回文档树。
 
-### 5.3 获取项目详情
+处理要求：
+
+- 查询当前用户所在的 `workspace_members`。
+- 返回对应 workspace 和当前用户在每个 workspace 中的角色。
+
+响应体示例：
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "items": [
+      {
+        "id": "workspace-1",
+        "name": "研发空间",
+        "description": "项目资料",
+        "ownerUserId": "user-1",
+        "role": "owner",
+        "status": "active",
+        "createdAt": "2026-04-27T10:00:00Z",
+        "updatedAt": "2026-04-27T10:00:00Z"
+      }
+    ]
+  }
+}
+```
+
+### 5.3 获取 Workspace 目录子节点
 
 - 方法：`GET`
-- 路径：`/api/v1/projects/:projectId`
-- 权限：`login`
+- 路径：`/api/v1/workspaces/:workspaceId`
+- 权限：`login` 或可通过 `doc_acl` 访问的外部用户
 
-## 6. 文档接口
+用途：
 
-### 6.1 上传文件型文档
+- 进入 workspace 时获取根级目录。
+- 展开某个父文档时，懒加载该父文档的直接子节点。
+- 该接口只返回一层子节点，不返回整棵树。
+
+查询参数：
+
+- `parentId`：父文档 ID。为空或不传时表示获取根级文档。
+- `status`：文档状态，默认 `active`。
+- `limit`：返回数量，默认由后端配置。
+- `cursor`：分页游标，可选。
+
+请求示例：
+
+```http
+GET /api/v1/workspaces/workspace-1?parentId=doc-a
+```
+
+获取根级节点：
+
+```http
+GET /api/v1/workspaces/workspace-1
+```
+
+处理要求：
+
+- 查询 workspace 基础信息。
+- 校验当前用户对 workspace 或目标父文档有访问资格。
+- 当 `parentId` 为空时，查询 `parent_id IS NULL` 的根级文档。
+- 当 `parentId` 不为空时，校验父文档存在且属于当前 workspace。
+- 查询目标 parent 的直接子文档。
+- 对返回节点逐个做 `READ` 权限过滤。
+- 按 `sort_order ASC, created_at ASC` 排序。
+- 返回 workspace 信息、当前用户角色、父节点信息和子节点列表。
+
+响应体示例：
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "workspace": {
+      "id": "workspace-1",
+      "name": "研发空间",
+      "description": "项目资料",
+      "ownerUserId": "user-1",
+      "status": "active"
+    },
+    "currentMember": {
+      "userId": "user-1",
+      "role": "owner"
+    },
+    "parent": {
+      "id": "doc-a",
+      "title": "产品文档",
+      "permissionBit": 7
+    },
+    "items": [
+      {
+        "id": "doc-b",
+        "workspaceId": "workspace-1",
+        "parentId": "doc-a",
+        "title": "需求说明",
+        "summary": "",
+        "ownerUserId": "user-1",
+        "docType": "rich_text",
+        "status": "active",
+        "sortOrder": 1000,
+        "permissionBit": 7,
+        "hasChildren": false,
+        "createdAt": "2026-04-27T10:00:00Z",
+        "updatedAt": "2026-04-27T10:00:00Z"
+      }
+    ],
+    "nextCursor": null
+  }
+}
+```
+
+说明：
+
+- `parent = null` 表示当前返回的是 workspace 根级目录。
+- `hasChildren` 用于前端决定是否展示展开入口。
+- `updatedAt` 是文档元数据更新时间，不代表正文最近编辑时间。
+
+### 5.4 更新 Workspace 元数据
+
+- 方法：`PATCH`
+- 路径：`/api/v1/workspaces/:workspaceId`
+- 权限：`workspace owner`
+
+可更新字段：
+
+- `name`
+- `description`
+- `status`
+
+### 5.5 删除 Workspace
+
+- 方法：`DELETE`
+- 路径：`/api/v1/workspaces/:workspaceId`
+- 权限：`workspace owner`
+
+处理要求：
+
+- 建议软删除，更新 `workspaces.status = deleted`。
+- 被删除 workspace 不再出现在 workspace 列表中。
+
+## 6. Workspace Member 接口
+
+### 6.1 获取 Workspace 成员列表
+
+- 方法：`GET`
+- 路径：`/api/v1/workspaces/:workspaceId/members`
+- 权限：`workspace member` 或 `workspace owner`
+
+用途：
+
+- 查看 workspace 当前成员和角色。
+
+响应体示例：
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "items": [
+      {
+        "userId": "user-1",
+        "role": "owner",
+        "joinedAt": "2026-04-27T10:00:00Z"
+      },
+      {
+        "userId": "user-2",
+        "role": "member",
+        "joinedAt": "2026-04-27T10:10:00Z"
+      }
+    ]
+  }
+}
+```
+
+### 6.2 添加 Workspace 成员
 
 - 方法：`POST`
-- 路径：`/api/v1/documents/upload`
-- 权限：`login`
+- 路径：`/api/v1/workspaces/:workspaceId/members`
+- 权限：`workspace owner`
+
+请求体示例：
+
+```json
+{
+  "userId": "user-2",
+  "role": "member"
+}
+```
+
+处理要求：
+
+- `role` 只允许 `owner` 或 `member`。
+- 校验目标用户存在。
+- 已存在成员时可返回 `409`，也可按幂等语义返回已有记录。
+
+### 6.3 修改 Workspace 成员角色
+
+- 方法：`PATCH`
+- 路径：`/api/v1/workspaces/:workspaceId/members/:userId`
+- 权限：`workspace owner`
+
+请求体示例：
+
+```json
+{
+  "role": "owner"
+}
+```
+
+处理要求：
+
+- `role` 只允许 `owner` 或 `member`。
+- 不允许把 workspace 修改到没有任何 owner 的状态。
+
+### 6.4 移除 Workspace 成员
+
+- 方法：`DELETE`
+- 路径：`/api/v1/workspaces/:workspaceId/members/:userId`
+- 权限：`workspace owner`
+
+处理要求：
+
+- 不允许删除 workspace 最后一个 owner。
+
+## 7. Document 接口
+
+### 7.1 创建文档
+
+- 方法：`POST`
+- 路径：`/api/v1/workspaces/:workspaceId/documents`
+- 权限：根文档需要 `workspace member` 或 `workspace owner`；子文档需要对父文档有 `EDIT` 位
+
+请求体示例：
+
+```json
+{
+  "parentId": null,
+  "title": "需求文档",
+  "summary": "",
+  "docType": "rich_text"
+}
+```
+
+处理要求：
+
+- 校验 workspace 存在且未删除。
+- 如果 `parentId` 为空，创建根文档。
+- 如果 `parentId` 不为空，校验父文档存在且属于当前 workspace。
+- `owner_user_id` 设置为当前用户。
+- `sort_order` 设置为同级最大 `sort_order + 1000`。
+- `status` 默认为 `active`。
+- `source_storage_key` 由后端生成或由后续正文/文件服务补充。
+
+### 7.2 上传文件型文档
+
+- 方法：`POST`
+- 路径：`/api/v1/workspaces/:workspaceId/documents/upload`
+- 权限：根文档需要 `workspace member` 或 `workspace owner`；子文档需要对父文档有 `EDIT` 位
 - 内容类型：`multipart/form-data`
 
 表单字段建议：
 
 - `file`
+- `parentId`
 - `title`
-- `projectId`
 - `summary`
-- `stage`
-- `principalName`
-- `tags`
 
 处理要求：
 
-- 保存文件
-- 创建文档元数据
-- 建立拥有者关系
-- 生成初始历史记录
-- 写入审计日志
+- 保存文件。
+- 创建 `doc_type = file` 的 document 元数据。
+- `source_storage_key` 保存文件存储引用。
+- 不生成正文版本；正文版本和协同状态不属于本接口范围。
 
-### 6.2 创建富文本文档
-
-- 方法：`POST`
-- 路径：`/api/v1/documents`
-- 权限：`login`
-
-请求体示例：
-
-```json
-{
-  "title": "实验记录草稿",
-  "projectId": 10,
-  "summary": "记录 4 月实验过程",
-  "stage": "实验阶段",
-  "principalName": "张三",
-  "tags": ["实验", "阶段一"],
-  "docType": "rich_text"
-}
-```
-
-### 6.3 获取文档列表
-
-- 方法：`GET`
-- 路径：`/api/v1/documents`
-- 权限：`login`
-
-查询参数建议：
-
-- `keyword`
-- `projectId`
-- `stage`
-- `tag`
-- `ownerUserId`
-- `status`
-- `updatedFrom`
-- `updatedTo`
-- `page`
-- `pageSize`
-
-说明：
-
-- 返回结果必须经过权限过滤。
-
-### 6.4 获取文档详情
+### 7.3 获取文档详情
 
 - 方法：`GET`
 - 路径：`/api/v1/documents/:documentId`
-- 权限：`read`
+- 权限：`READ` 位
+
+用途：
+
+- 获取单个文档元数据。
+- 不返回正文内容。
 
 返回内容建议：
 
-- 文档基础信息
-- 当前权限摘要
-- 当前版本信息
-- 标签
-- 拥有者信息
+- 文档基础信息。
+- 当前用户最终权限 `permissionBit`。
+- 是否有子节点 `hasChildren`。
+- 拥有者信息。
 
-### 6.5 更新文档元数据
+### 7.4 更新文档元数据
 
 - 方法：`PATCH`
 - 路径：`/api/v1/documents/:documentId`
-- 权限：`edit`
+- 权限：`EDIT` 位
 
-可更新字段建议：
+可更新字段：
 
 - `title`
 - `summary`
-- `projectId`
-- `stage`
-- `principalName`
-- `tags`
+- `sourceStorageKey`
 
-### 6.6 归档文档
+说明：
 
-- 方法：`POST`
-- 路径：`/api/v1/documents/:documentId/archive`
-- 权限：`edit`
+- 这里只更新文档元数据，不更新正文内容。
+- `documents.updated_at` 是元数据更新时间，不代表正文最近编辑时间。
 
-### 6.7 取消归档
+### 7.5 移动文档
 
 - 方法：`POST`
-- 路径：`/api/v1/documents/:documentId/unarchive`
-- 权限：`edit`
-
-### 6.8 下载文档
-
-- 方法：`GET`
-- 路径：`/api/v1/documents/:documentId/download`
-- 权限：`read`
-
-补充说明：
-
-- 实际下载前应校验 `download` 能力。
-- 下载动作必须写审计日志。
-
-### 6.9 获取预览地址
-
-- 方法：`GET`
-- 路径：`/api/v1/documents/:documentId/preview`
-- 权限：`read`
-
-## 7. 历史版本接口
-
-### 7.1 获取历史版本列表
-
-- 方法：`GET`
-- 路径：`/api/v1/documents/:documentId/versions`
-- 权限：`read`
-
-返回字段建议：
-
-- `id`
-- `versionNo`
-- `snapshotType`
-- `summary`
-- `operator`
-- `createdAt`
-
-### 7.2 获取指定历史快照详情
-
-- 方法：`GET`
-- 路径：`/api/v1/documents/:documentId/versions/:versionId`
-- 权限：`read`
-
-### 7.3 恢复历史版本
-
-- 方法：`POST`
-- 路径：`/api/v1/documents/:documentId/versions/:versionId/restore`
-- 权限：`edit`
+- 路径：`/api/v1/documents/:documentId/move`
+- 权限：当前文档需要 `MANAGE` 位
 
 请求体示例：
 
 ```json
 {
-  "reason": "回滚误修改内容"
+  "parentId": "target-parent-id",
+  "sortOrder": 2000
 }
 ```
 
 处理要求：
 
-- 恢复当前文档状态
-- 生成新的历史记录
-- 写入审计日志
+- 校验当前文档存在。
+- 如果 `parentId` 不为空，校验目标父文档存在。
+- 校验目标父文档和当前文档属于同一个 workspace。
+- 不允许移动到自己下面。
+- 不允许移动到自己的子孙文档下面。
+- 更新 `parent_id` 和 `sort_order`。
 
-## 8. 共享与权限接口
-
-### 8.1 获取共享配置
-
-- 方法：`GET`
-- 路径：`/api/v1/documents/:documentId/permissions`
-- 权限：`MANAGE` 位
-
-返回内容建议：
-
-- 当前拥有者
-- 用户授权列表
-- 用户组授权列表
-- 当前用户最终权限
-
-### 8.2 批量更新单用户授权
-
-- 方法：`PUT`
-- 路径：`/api/v1/documents/:documentId/permissions/users`
-- 权限：`MANAGE` 位
-
-请求体示例：
-
-```json
-{
-  "items": [
-    {
-      "userId": 2,
-      "permissionBit": 7
-    },
-    {
-      "userId": 3,
-      "permissionBit": 1
-    }
-  ]
-}
-```
-
-### 8.3 批量更新用户组授权
-
-- 方法：`PUT`
-- 路径：`/api/v1/documents/:documentId/permissions/groups`
-- 权限：`MANAGE` 位
-
-### 8.4 转移文档拥有者
+### 7.6 归档文档
 
 - 方法：`POST`
-- 路径：`/api/v1/documents/:documentId/transfer-owner`
+- 路径：`/api/v1/documents/:documentId/archive`
 - 权限：`MANAGE` 位
 
-请求体示例：
+处理要求：
 
-```json
-{
-  "targetUserId": 10,
-  "reason": "项目负责人调整"
-}
-```
+- 更新 `documents.status = archived`。
+
+### 7.7 恢复文档
+
+- 方法：`POST`
+- 路径：`/api/v1/documents/:documentId/restore`
+- 权限：`MANAGE` 位
+
+处理要求：
+
+- 更新 `documents.status = active`。
+
+### 7.8 删除文档
+
+- 方法：`DELETE`
+- 路径：`/api/v1/documents/:documentId`
+- 权限：`MANAGE` 位
+
+处理要求：
+
+- 建议软删除，更新 `documents.status = deleted`。
+- 子文档处理策略需要实现时明确：要么级联软删除，要么禁止删除有子文档的文档。
+
+### 7.9 下载文件型文档
+
+- 方法：`GET`
+- 路径：`/api/v1/documents/:documentId/download`
+- 权限：`READ` 位
 
 说明：
 
-- 只有 `owner` 或系统管理员可执行。
-- 转移拥有者必须写审计日志。
+- 仅适用于 `doc_type = file` 的文档。
+- 下载动作必须写审计日志。
+
+## 8. Doc ACL 接口
+
+### 8.1 获取文档 ACL
+
+- 方法：`GET`
+- 路径：`/api/v1/documents/:documentId/acl`
+- 权限：`MANAGE` 位
+
+用途：
+
+- 查看当前文档上显式配置的文档级例外规则。
+- 不返回 workspace 默认权限。
+
+响应体示例：
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "items": [
+      {
+        "id": "acl-1",
+        "workspaceId": "workspace-1",
+        "documentId": "doc-1",
+        "subjectType": "public",
+        "subjectId": null,
+        "permissionBit": 1,
+        "inherit": true,
+        "createdBy": "user-1",
+        "createdAt": "2026-04-27T10:00:00Z",
+        "updatedAt": "2026-04-27T10:00:00Z"
+      }
+    ]
+  }
+}
+```
+
+### 8.2 新增文档 ACL
+
+- 方法：`POST`
+- 路径：`/api/v1/documents/:documentId/acl`
+- 权限：`MANAGE` 位
+
+请求体示例：
+
+```json
+{
+  "subjectType": "user",
+  "subjectId": "user-2",
+  "permissionBit": 3,
+  "inherit": true
+}
+```
+
+public 分享示例：
+
+```json
+{
+  "subjectType": "public",
+  "subjectId": null,
+  "permissionBit": 1,
+  "inherit": true
+}
+```
+
+处理要求：
+
+- `subjectType` 只允许 `user` 或 `public`。
+- `subjectType = user` 时，`subjectId` 必须为有效用户 ID。
+- `subjectType = public` 时，`subjectId` 必须为空。
+- `permissionBit` 允许 `READ`、`EDIT`、`MANAGE` 的组合，或单独 `DENY`。
+- `doc_acl` 只存文档级例外规则。
+
+### 8.3 更新文档 ACL
+
+- 方法：`PATCH`
+- 路径：`/api/v1/documents/:documentId/acl/:aclId`
+- 权限：`MANAGE` 位
+
+可更新字段：
+
+- `permissionBit`
+- `inherit`
+
+### 8.4 删除文档 ACL
+
+- 方法：`DELETE`
+- 路径：`/api/v1/documents/:documentId/acl/:aclId`
+- 权限：`MANAGE` 位
+
+处理要求：
+
+- 删除当前文档上的指定 ACL 规则。
 
 ### 8.5 获取当前用户对文档的最终权限
 
@@ -528,8 +783,8 @@
 
 用途：
 
-- 前端详情页快速判断按钮态
-- 协同编辑页进入前预检
+- 前端详情页快速判断按钮态。
+- 打开正文编辑页前预检。
 
 响应体示例：
 
@@ -538,58 +793,24 @@
   "code": 0,
   "message": "success",
   "data": {
-    "documentId": 1001,
-    "userPerm": 3
+    "documentId": "doc-1",
+    "permissionBit": 7,
+    "canRead": true,
+    "canEdit": true,
+    "canManage": true
   }
 }
 ```
 
-## 9. 协同编辑接口
+## 9. 正文与协同边界
 
-### 9.1 获取协同会话票据
+本阶段 API 草案不设计正文内容和协同编辑接口。
 
-- 方法：`GET`
-- 路径：`/api/v1/documents/:documentId/collab/token`
-- 权限：`edit`
+边界约定：
 
-响应体示例：
-
-```json
-{
-  "code": 0,
-  "message": "success",
-  "data": {
-    "token": "short-lived-token",
-    "expiresIn": 300
-  }
-}
-```
-
-### 9.2 获取在线协作者
-
-- 方法：`GET`
-- 路径：`/api/v1/documents/:documentId/collab/presence`
-- 权限：`read`
-
-### 9.3 正式保存协同内容
-
-- 方法：`POST`
-- 路径：`/api/v1/documents/:documentId/collab/save`
-- 权限：`edit`
-
-请求体示例：
-
-```json
-{
-  "summary": "补充实验结论部分"
-}
-```
-
-处理要求：
-
-- 从协同状态生成正式快照
-- 更新当前版本
-- 写入历史记录和审计日志
+- `documents` 不保存正文内容。
+- `documents.updated_at` 只表示文档元数据更新时间。
+- 正文内容、正文版本、正文最近编辑时间、协同状态和 snapshot 由正文/协同服务负责。
 
 ## 10. 评论接口
 
@@ -601,8 +822,11 @@
 
 查询参数建议：
 
-- `versionId`
 - `status`
+
+说明：
+
+- 本阶段评论只绑定文档，不设计正文位置锚点和正文版本锚点。
 
 ### 10.2 新增评论
 
@@ -614,12 +838,7 @@
 
 ```json
 {
-  "content": "这里的实验条件需要补充说明",
-  "versionId": 23,
-  "anchorData": {
-    "from": 120,
-    "to": 150
-  }
+  "content": "这里的实验条件需要补充说明"
 }
 ```
 
@@ -654,20 +873,18 @@
 查询参数建议：
 
 - `q`
-- `projectId`
-- `tag`
-- `stage`
-- `fileType`
+- `workspaceId`
+- `parentId`
+- `docType`
 - `ownerUserId`
-- `permissionLevel`
-- `updatedFrom`
-- `updatedTo`
+- `status`
 - `page`
 - `pageSize`
 
 说明：
 
-- 元数据搜索和全文搜索可以先共用一个入口，内部按能力拆分实现。
+- 第一阶段只搜索文档元数据，例如标题和摘要。
+- 正文全文搜索属于正文/协同服务范围，后续单独设计。
 - 搜索结果必须在返回前完成权限过滤。
 
 ## 12. 审计日志接口
@@ -738,15 +955,23 @@
 
 - `POST /api/v1/auth/login`
 - `GET /api/v1/auth/me`
-- `POST /api/v1/documents/upload`
-- `POST /api/v1/documents`
-- `GET /api/v1/documents`
+- `POST /api/v1/workspaces`
+- `GET /api/v1/workspaces`
+- `GET /api/v1/workspaces/:workspaceId`
+- `GET /api/v1/workspaces/:workspaceId/members`
+- `POST /api/v1/workspaces/:workspaceId/members`
+- `DELETE /api/v1/workspaces/:workspaceId/members/:userId`
+- `POST /api/v1/workspaces/:workspaceId/documents`
+- `POST /api/v1/workspaces/:workspaceId/documents/upload`
 - `GET /api/v1/documents/:documentId`
 - `PATCH /api/v1/documents/:documentId`
-- `GET /api/v1/documents/:documentId/versions`
-- `GET /api/v1/documents/:documentId/permissions`
-- `PUT /api/v1/documents/:documentId/permissions/users`
-- `PUT /api/v1/documents/:documentId/permissions/groups`
+- `POST /api/v1/documents/:documentId/move`
+- `DELETE /api/v1/documents/:documentId`
+- `GET /api/v1/documents/:documentId/acl`
+- `POST /api/v1/documents/:documentId/acl`
+- `PATCH /api/v1/documents/:documentId/acl/:aclId`
+- `DELETE /api/v1/documents/:documentId/acl/:aclId`
+- `GET /api/v1/documents/:documentId/my-permission`
 - `GET /api/v1/documents/:documentId/comments`
 - `POST /api/v1/documents/:documentId/comments`
 
@@ -754,9 +979,11 @@
 
 ```text
 登录
+-> 创建 workspace
+-> 懒加载 workspace 目录子节点
 -> 创建 / 上传文档
--> 查看列表和详情
--> 分配共享权限
--> 查看历史
+-> 查看和更新文档元数据
+-> 移动文档
+-> 配置 doc_acl 例外权限
 -> 评论协作
 ```

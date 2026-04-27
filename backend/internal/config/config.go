@@ -1,11 +1,11 @@
 package config
 
 import (
-	"bufio"
 	"os"
 	"strconv"
-	"strings"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -20,8 +20,7 @@ type JWTConfig struct {
 }
 
 func Load() Config {
-	loadDotEnv(".env")
-	loadDotEnv("../.env")
+	_ = godotenv.Load(".env", "../.env")
 
 	return Config{
 		HTTPAddr: getEnv("HTTP_ADDR", ":8080"),
@@ -51,32 +50,4 @@ func getDurationEnv(key string, fallback time.Duration) time.Duration {
 		return fallback
 	}
 	return time.Duration(seconds) * time.Second
-}
-
-func loadDotEnv(path string) {
-	file, err := os.Open(path)
-	if err != nil {
-		return
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-
-		key, value, ok := strings.Cut(line, "=")
-		if !ok {
-			continue
-		}
-
-		key = strings.TrimSpace(key)
-		value = strings.Trim(strings.TrimSpace(value), `"'`)
-		if key == "" || os.Getenv(key) != "" {
-			continue
-		}
-		_ = os.Setenv(key, value)
-	}
 }
