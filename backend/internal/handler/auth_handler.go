@@ -52,6 +52,17 @@ type UpdateProfileRequest struct {
 	Supervisor        string                   `json:"supervisor"`
 }
 
+// Login 用户登录
+// @Summary 用户登录
+// @Description 使用邮箱和密码登录，返回 JWT 访问令牌和用户信息。
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body LoginRequest true "登录参数"
+// @Success 200 {object} response.Body
+// @Failure 400 {object} response.Body
+// @Failure 401 {object} response.Body
+// @Router /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
 
@@ -72,6 +83,16 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	response.Success(c, result)
 }
 
+// Register 注册账号
+// @Summary 注册账号
+// @Description 创建新用户账号。
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body RegisterRequest true "注册参数"
+// @Success 201 {object} response.Body
+// @Failure 400 {object} response.Body
+// @Router /auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -97,6 +118,19 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	response.Created(c, gin.H{"message": "注册成功"})
 }
 
+// ChangePassword 修改密码
+// @Summary 修改密码
+// @Description 修改当前登录用户的密码。
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body ChangePasswordRequest true "修改密码参数"
+// @Success 200 {object} response.Body
+// @Failure 400 {object} response.Body
+// @Failure 401 {object} response.Body
+// @Failure 404 {object} response.Body
+// @Router /auth/password [put]
 func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	var req ChangePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -123,6 +157,19 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	response.Success(c, gin.H{"message": "密码修改成功"})
 }
 
+// UpdateProfile 修改个人信息
+// @Summary 修改个人信息
+// @Description 修改当前登录用户的个人资料。
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body UpdateProfileRequest true "个人资料参数"
+// @Success 200 {object} response.Body
+// @Failure 400 {object} response.Body
+// @Failure 401 {object} response.Body
+// @Failure 404 {object} response.Body
+// @Router /auth/profile [put]
 func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 	var req UpdateProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

@@ -1,0 +1,234 @@
+basePath: /api/v1
+definitions:
+  domain.ProfessionalTitle:
+    enum:
+    - professor
+    - associate_professor
+    - lecturer
+    - researcher
+    - engineer
+    - doctoral_student
+    - master_student
+    - other
+    type: string
+    x-enum-varnames:
+    - ProfessionalTitleProfessor
+    - ProfessionalTitleAssociateProfessor
+    - ProfessionalTitleLecturer
+    - ProfessionalTitleResearcher
+    - ProfessionalTitleEngineer
+    - ProfessionalTitleDoctoralStudent
+    - ProfessionalTitleMasterStudent
+    - ProfessionalTitleOther
+  handler.ChangePasswordRequest:
+    properties:
+      new_password:
+        type: string
+      old_password:
+        type: string
+    required:
+    - new_password
+    - old_password
+    type: object
+  handler.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  handler.RegisterRequest:
+    properties:
+      avatar_url:
+        type: string
+      email:
+        type: string
+      organization:
+        type: string
+      password:
+        type: string
+      professional_title:
+        $ref: '#/definitions/domain.ProfessionalTitle'
+      signature:
+        type: string
+      supervisor:
+        type: string
+      username:
+        type: string
+    required:
+    - email
+    - password
+    - username
+    type: object
+  handler.UpdateProfileRequest:
+    properties:
+      avatar_url:
+        type: string
+      email:
+        type: string
+      organization:
+        type: string
+      professional_title:
+        $ref: '#/definitions/domain.ProfessionalTitle'
+      signature:
+        type: string
+      supervisor:
+        type: string
+      username:
+        type: string
+    required:
+    - email
+    - username
+    type: object
+  response.Body:
+    properties:
+      code:
+        type: integer
+      data: {}
+      message:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: 科研项目文档管理系统后端 API。
+  title: Research Admin Backend API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: 使用邮箱和密码登录，返回 JWT 访问令牌和用户信息。
+      parameters:
+      - description: 登录参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 用户登录
+      tags:
+      - auth
+  /auth/password:
+    put:
+      consumes:
+      - application/json
+      description: 修改当前登录用户的密码。
+      parameters:
+      - description: 修改密码参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 修改密码
+      tags:
+      - auth
+  /auth/profile:
+    put:
+      consumes:
+      - application/json
+      description: 修改当前登录用户的个人资料。
+      parameters:
+      - description: 个人资料参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 修改个人信息
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: 创建新用户账号。
+      parameters:
+      - description: 注册参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Body'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 注册账号
+      tags:
+      - auth
+securityDefinitions:
+  BearerAuth:
+    description: 输入 Bearer Token，格式：Bearer {token}
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

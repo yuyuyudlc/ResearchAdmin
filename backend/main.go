@@ -12,6 +12,14 @@ import (
 	"research/internal/service"
 )
 
+// @title Research Admin Backend API
+// @version 1.0
+// @description 科研项目文档管理系统后端 API。
+// @BasePath /api/v1
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description 输入 Bearer Token，格式：Bearer {token}
 func main() {
 	cfg := config.Load()
 
