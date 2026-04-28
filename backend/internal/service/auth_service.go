@@ -25,13 +25,13 @@ type RegisterRequest struct {
 }
 
 type ChangePasswordRequest struct {
-	UserID      uint
+	UserID      string
 	OldPassword string
 	NewPassword string
 }
 
 type UpdateProfileRequest struct {
-	UserID            uint
+	UserID            string
 	Username          string
 	Email             string
 	Organization      string
@@ -53,7 +53,7 @@ type LoginResult struct {
 }
 
 type UserResponse struct {
-	ID                uint                     `json:"id"`
+	ID                string                   `json:"id"`
 	Username          string                   `json:"username"`
 	Email             string                   `json:"email"`
 	Organization      string                   `json:"organization"`
@@ -83,7 +83,7 @@ func (s *AuthService) Register(ctx context.Context, req RegisterRequest) error {
 		return errors.New("密码长度不能少于6位")
 	}
 
-	if err := s.ensureEmailAvailable(ctx, email, 0); err != nil {
+	if err := s.ensureEmailAvailable(ctx, email, ""); err != nil {
 		return err
 	}
 
@@ -110,7 +110,7 @@ func (s *AuthService) Register(ctx context.Context, req RegisterRequest) error {
 func (s *AuthService) ChangePassword(ctx context.Context, req ChangePasswordRequest) error {
 	oldPassword := strings.TrimSpace(req.OldPassword)
 	newPassword := strings.TrimSpace(req.NewPassword)
-	if req.UserID == 0 || oldPassword == "" || newPassword == "" {
+	if req.UserID == "" || oldPassword == "" || newPassword == "" {
 		return errors.New("用户ID、旧密码和新密码不能为空")
 	}
 	if len(newPassword) < 6 {
@@ -135,7 +135,7 @@ func (s *AuthService) ChangePassword(ctx context.Context, req ChangePasswordRequ
 func (s *AuthService) UpdateProfile(ctx context.Context, req UpdateProfileRequest) error {
 	username := strings.TrimSpace(req.Username)
 	email := strings.TrimSpace(req.Email)
-	if req.UserID == 0 || username == "" || email == "" {
+	if req.UserID == "" || username == "" || email == "" {
 		return errors.New("用户ID、用户名和邮箱不能为空")
 	}
 
@@ -187,7 +187,7 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*Login
 	}, nil
 }
 
-func (s *AuthService) ensureEmailAvailable(ctx context.Context, email string, currentUserID uint) error {
+func (s *AuthService) ensureEmailAvailable(ctx context.Context, email string, currentUserID string) error {
 	existingUser, err := s.repo.GetByEmail(ctx, email)
 	if errors.Is(err, domain.ErrUserNotFound) {
 		return nil

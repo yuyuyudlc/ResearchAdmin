@@ -43,7 +43,13 @@
 }
 ```
 
-### 2.4 认证与权限约定
+### 2.4 ID 约定
+
+- 全站业务主键统一使用 UUID 字符串。
+- 请求和响应中的 `userId`、`workspaceId`、`documentId`、`aclId` 等 ID 字段都按字符串处理。
+- 前端不要把 ID 转成 number。
+
+### 2.5 认证与权限约定
 
 本草案将“是否登录”与“文档 ACL 权限级别”分开描述。
 
@@ -109,7 +115,7 @@
     "accessToken": "jwt-token",
     "expiresIn": 7200,
     "user": {
-      "id": 1,
+      "id": "0192e6f7-2f4b-4f35-8e9b-9b6f7a7f2c10",
       "username": "alice",
       "email": "alice@example.com",
       "organization": "智能计算实验室",

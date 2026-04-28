@@ -19,7 +19,7 @@ func NewUserRepository(db *gorm.DB) domain.UserRepository {
 	return &userRepo{db: db}
 }
 
-func (r *userRepo) GetByID(ctx context.Context, id uint) (*domain.User, error) {
+func (r *userRepo) GetByID(ctx context.Context, id string) (*domain.User, error) {
 	var user domain.User
 	err := r.db.WithContext(ctx).First(&user, id).Error
 	if err != nil {
@@ -47,7 +47,7 @@ func (r *userRepo) Create(ctx context.Context, user *domain.User) error {
 	return r.db.WithContext(ctx).Create(user).Error
 }
 
-func (r *userRepo) UpdatePasswordHash(ctx context.Context, userID uint, passwordHash string) error {
+func (r *userRepo) UpdatePasswordHash(ctx context.Context, userID string, passwordHash string) error {
 	return r.db.WithContext(ctx).
 		Model(&domain.User{}).
 		Where("id = ?", userID).
@@ -72,7 +72,7 @@ func (r *userRepo) UpdateProfile(ctx context.Context, user *domain.User) error {
 		Error
 }
 
-func (r *userRepo) UpdateLastLoginAt(ctx context.Context, userID uint, lastLoginAt time.Time) error {
+func (r *userRepo) UpdateLastLoginAt(ctx context.Context, userID string, lastLoginAt time.Time) error {
 	return r.db.WithContext(ctx).
 		Model(&domain.User{}).
 		Where("id = ?", userID).

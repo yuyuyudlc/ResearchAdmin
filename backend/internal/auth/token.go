@@ -10,7 +10,7 @@ import (
 )
 
 type Claims struct {
-	UserID            uint                     `json:"user_id"`
+	UserID            string                   `json:"user_id"`
 	Username          string                   `json:"username"`
 	Email             string                   `json:"email"`
 	Organization      string                   `json:"organization"`

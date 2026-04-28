@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 var ErrUserNotFound = errors.New("用户不存在")
@@ -22,7 +24,7 @@ const (
 )
 
 type User struct {
-	ID                uint              `gorm:"primaryKey" json:"id"`
+	ID                string            `gorm:"type:char(36);primaryKey" json:"id"`
 	Username          string            `gorm:"not null" json:"username"`
 	Email             string            `gorm:"uniqueIndex" json:"email"`
 	Organization      string            `json:"organization"`
@@ -38,12 +40,24 @@ type User struct {
 	UpdatedAt         time.Time         `json:"updated_at"`
 }
 
+func (u *User) BeforeCreate(_ *gorm.DB) error {
+	if u.ID != "" {
+		return nil
+	}
+	id, err := NewUUID()
+	if err != nil {
+		return err
+	}
+	u.ID = id
+	return nil
+}
+
 // UserRepository 接口：隔离数据库实现
 type UserRepository interface {
-	GetByID(ctx context.Context, id uint) (*User, error)
+	GetByID(ctx context.Context, id string) (*User, error)
 	GetByEmail(ctx context.Context, email string) (*User, error)
 	Create(ctx context.Context, user *User) error
-	UpdatePasswordHash(ctx context.Context, userID uint, passwordHash string) error
+	UpdatePasswordHash(ctx context.Context, userID string, passwordHash string) error
 	UpdateProfile(ctx context.Context, user *User) error
-	UpdateLastLoginAt(ctx context.Context, userID uint, lastLoginAt time.Time) error
+	UpdateLastLoginAt(ctx context.Context, userID string, lastLoginAt time.Time) error
 }

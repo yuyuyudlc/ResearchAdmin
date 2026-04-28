@@ -40,11 +40,11 @@ func JWTAuth(tokenManager *auth.TokenManager) gin.HandlerFunc {
 	}
 }
 
-func CurrentUserID(c *gin.Context) (uint, bool) {
+func CurrentUserID(c *gin.Context) (string, bool) {
 	userID, ok := c.Get(currentUserIDKey)
 	if !ok {
-		return 0, false
+		return "", false
 	}
-	value, ok := userID.(uint)
+	value, ok := userID.(string)
 	return value, ok
 }
