@@ -31,8 +31,10 @@ func main() {
 	tokenManager := auth.NewTokenManager(cfg.JWT.Secret, cfg.JWT.TTL)
 	userRepo := repository.NewUserRepository(db)
 	authService := service.NewAuthService(userRepo, tokenManager)
+	documentService := service.NewDocumentService(db)
 	authHandler := handler.NewAuthHandler(authService)
-	r := router.New(authHandler, tokenManager)
+	documentHandler := handler.NewDocumentHandler(documentService)
+	r := router.New(authHandler, documentHandler, tokenManager)
 
 	log.Printf("Server starting on %s...", cfg.HTTPAddr)
 	if err := r.Run(cfg.HTTPAddr); err != nil {
