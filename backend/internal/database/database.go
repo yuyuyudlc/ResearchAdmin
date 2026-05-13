@@ -18,6 +18,7 @@ func Open(dsn string) (*gorm.DB, error) {
 		&domain.WorkspaceMember{},
 		&domain.Document{},
 		&domain.DocACL{},
+		&domain.DocumentBody{},
 	); err != nil {
 		return nil, err
 	}

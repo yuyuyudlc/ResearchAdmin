@@ -94,6 +94,8 @@ type CreateDocumentRequest struct {
 	Summary          string
 	DocType          domain.DocumentType
 	SourceStorageKey string
+	BodyData         []byte
+	BodyType         string
 }
 
 type UpdateDocumentRequest struct {

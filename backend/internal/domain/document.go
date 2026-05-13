@@ -96,6 +96,31 @@ type DocACL struct {
 	UpdatedAt     time.Time      `json:"updated_at"`
 }
 
+const (
+	BodyTypeYjsState = "yjs_state"
+	BodyTypePdf      = "pdf"
+	BodyTypeWord     = "word"
+	BodyTypeVideo    = "video"
+)
+
+type DocumentBody struct {
+	ID         string    `gorm:"type:char(36);primaryKey" json:"id"`
+	DocumentID string    `gorm:"type:char(36);not null;uniqueIndex" json:"document_id"`
+	BodyType   string    `gorm:"size:32;not null" json:"body_type"`
+	Data       []byte    `gorm:"type:blob" json:"-"`
+	Size       int64     `gorm:"not null;default:0" json:"size"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
+func (b *DocumentBody) BeforeCreate(_ *gorm.DB) error {
+	return assignUUID(&b.ID)
+}
+
+func (DocumentBody) TableName() string {
+	return "document_bodies"
+}
+
 func (w *Workspace) BeforeCreate(_ *gorm.DB) error {
 	return assignUUID(&w.ID)
 }

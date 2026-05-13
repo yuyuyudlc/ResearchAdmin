@@ -3,6 +3,7 @@ package domain
 import (
 	"context"
 	"errors"
+	"time"
 )
 
 var ErrNotFound = errors.New("资源不存在")
@@ -22,8 +23,8 @@ type WorkspaceWithRole struct {
 	OwnerUserID string
 	Role        WorkspaceMemberRole
 	Status      WorkspaceStatus
-	CreatedAt   any
-	UpdatedAt   any
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 type WorkspaceMemberRepository interface {
@@ -42,6 +43,13 @@ type DocumentRepository interface {
 	ListChildren(ctx context.Context, workspaceID string, parentID *string, status DocumentStatus, limit int) ([]Document, error)
 	HasChildren(ctx context.Context, documentID string) (bool, error)
 	NextSortOrder(ctx context.Context, workspaceID string, parentID *string) (int, error)
+}
+
+type DocumentBodyRepository interface {
+	Create(ctx context.Context, body *DocumentBody) error
+	GetByDocumentID(ctx context.Context, documentID string) (*DocumentBody, error)
+	Update(ctx context.Context, documentID string, data []byte, bodyType string) error
+	Delete(ctx context.Context, documentID string) error
 }
 
 type DocACLRepository interface {

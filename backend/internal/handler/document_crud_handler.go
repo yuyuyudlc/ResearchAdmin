@@ -1,7 +1,10 @@
 package handler
 
 import (
+	"io"
 	"net/http"
+	"path/filepath"
+	"strings"
 
 	"research/internal/domain"
 	"research/internal/response"
@@ -100,6 +103,18 @@ func (h *DocumentHandler) UploadDocument(c *gin.Context) {
 		title = file.Filename
 	}
 
+	src, err := file.Open()
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "读取文件失败")
+		return
+	}
+	defer src.Close()
+	data, err := io.ReadAll(src)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "读取文件失败")
+		return
+	}
+
 	item, err := h.svc.CreateDocument(c.Request.Context(), service.CreateDocumentRequest{
 		UserID:           userID,
 		WorkspaceID:      c.Param("workspaceId"),
@@ -108,6 +123,8 @@ func (h *DocumentHandler) UploadDocument(c *gin.Context) {
 		Summary:          summary,
 		DocType:          domain.DocumentTypeFile,
 		SourceStorageKey: file.Filename,
+		BodyData:         data,
+		BodyType:         inferBodyType(file.Filename),
 	})
 	if err != nil {
 		respondServiceError(c, err)
@@ -300,6 +317,20 @@ func (h *DocumentHandler) DownloadDocument(c *gin.Context) {
 		return
 	}
 	response.Success(c, gin.H{"sourceStorageKey": item.SourceStorageKey})
+}
+
+func inferBodyType(filename string) string {
+	ext := strings.ToLower(filepath.Ext(filename))
+	switch ext {
+	case ".pdf":
+		return domain.BodyTypePdf
+	case ".doc", ".docx":
+		return domain.BodyTypeWord
+	case ".mp4", ".mov", ".avi", ".mkv":
+		return domain.BodyTypeVideo
+	default:
+		return domain.BodyTypeYjsState
+	}
 }
 
 func (h *DocumentHandler) setDocumentStatus(c *gin.Context, status domain.DocumentStatus, message string) {

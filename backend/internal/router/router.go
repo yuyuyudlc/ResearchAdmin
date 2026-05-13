@@ -51,6 +51,8 @@ func New(authHandler *handler.AuthHandler, documentHandler *handler.DocumentHand
 	api.PATCH("/documents/:documentId/acl/:aclId", documentHandler.UpdateACL)
 	api.DELETE("/documents/:documentId/acl/:aclId", documentHandler.DeleteACL)
 	api.GET("/documents/:documentId/my-permission", documentHandler.MyPermission)
+	api.GET("/documents/:documentId/body", documentHandler.GetBody)
+	api.PUT("/documents/:documentId/body", documentHandler.PutBody)
 
 	return r
 }

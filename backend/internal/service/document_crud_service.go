@@ -46,6 +46,15 @@ func (s *DocumentService) CreateDocument(ctx context.Context, req CreateDocument
 	if err := s.documentRepo.Create(ctx, doc); err != nil {
 		return nil, err
 	}
+	if len(req.BodyData) > 0 {
+		bodyType := req.BodyType
+		if bodyType == "" {
+			bodyType = domain.BodyTypeYjsState
+		}
+		if err := s.bodyRepo.Update(ctx, doc.ID, req.BodyData, bodyType); err != nil {
+			return nil, err
+		}
+	}
 	return s.documentItemWithCurrentPermission(ctx, req.UserID, doc)
 }
 

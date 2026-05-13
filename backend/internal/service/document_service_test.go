@@ -159,6 +159,7 @@ func newTestDocumentService(t *testing.T) (*DocumentService, *gorm.DB) {
 		repository.NewDocumentRepository(db),
 		repository.NewDocACLRepository(db),
 		repository.NewUserRepository(db),
+		repository.NewDocumentBodyRepository(db),
 	)
 	return svc, db
 }
