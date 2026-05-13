@@ -70,14 +70,12 @@ func (s *DocumentService) resolveDirectoryParent(ctx context.Context, userID, wo
 }
 
 func (s *DocumentService) readDirectoryItems(ctx context.Context, userID, workspaceID string, parent *domain.Document, status domain.DocumentStatus, limit int) ([]DocumentItem, error) {
-	var docs []domain.Document
-	query := s.db.WithContext(ctx).Where("workspace_id = ? AND status = ?", workspaceID, status)
+	var parentID *string
 	if parent != nil {
-		query = query.Where("parent_id = ?", parent.ID)
-	} else {
-		query = query.Where("parent_id IS NULL")
+		parentID = &parent.ID
 	}
-	if err := query.Order("sort_order ASC, created_at ASC").Limit(limit).Find(&docs).Error; err != nil {
+	docs, err := s.documentRepo.ListChildren(ctx, workspaceID, parentID, status, limit)
+	if err != nil {
 		return nil, err
 	}
 

@@ -4,12 +4,27 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"research/internal/domain"
-
-	"gorm.io/gorm"
 )
+
+func (s *DocumentService) CreatePrivateWorkspace(ctx context.Context, userID string) error {
+	workspace := &domain.Workspace{
+		Name:        "我的私人空间",
+		Description: "仅自己可见的私人文档",
+		OwnerUserID: userID,
+		Status:      domain.WorkspaceStatusActive,
+	}
+	if err := s.workspaceRepo.Create(ctx, workspace); err != nil {
+		return err
+	}
+	member := &domain.WorkspaceMember{
+		WorkspaceID: workspace.ID,
+		UserID:      userID,
+		Role:        domain.WorkspaceMemberRoleOwner,
+	}
+	return s.workspaceMemberRepo.Create(ctx, member)
+}
 
 func (s *DocumentService) CreateWorkspace(ctx context.Context, req CreateWorkspaceRequest) (*WorkspaceResponse, error) {
 	name := strings.TrimSpace(req.Name)
@@ -23,41 +38,22 @@ func (s *DocumentService) CreateWorkspace(ctx context.Context, req CreateWorkspa
 		OwnerUserID: req.UserID,
 		Status:      domain.WorkspaceStatusActive,
 	}
-	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(workspace).Error; err != nil {
-			return err
-		}
-		member := &domain.WorkspaceMember{
-			WorkspaceID: workspace.ID,
-			UserID:      req.UserID,
-			Role:        domain.WorkspaceMemberRoleOwner,
-		}
-		return tx.Create(member).Error
-	})
-	if err != nil {
+	if err := s.workspaceRepo.Create(ctx, workspace); err != nil {
+		return nil, err
+	}
+	member := &domain.WorkspaceMember{
+		WorkspaceID: workspace.ID,
+		UserID:      req.UserID,
+		Role:        domain.WorkspaceMemberRoleOwner,
+	}
+	if err := s.workspaceMemberRepo.Create(ctx, member); err != nil {
 		return nil, err
 	}
 	return workspaceResponse(workspace, true), nil
 }
 
 func (s *DocumentService) ListWorkspaces(ctx context.Context, userID string) ([]WorkspaceItem, error) {
-	var rows []struct {
-		ID          string
-		Name        string
-		Description string
-		OwnerUserID string
-		Role        domain.WorkspaceMemberRole
-		Status      domain.WorkspaceStatus
-		CreatedAt   time.Time
-		UpdatedAt   time.Time
-	}
-	err := s.db.WithContext(ctx).
-		Table("workspaces").
-		Select("workspaces.id, workspaces.name, workspaces.description, workspaces.owner_user_id, workspaces.status, workspaces.created_at, workspaces.updated_at, workspace_members.role").
-		Joins("JOIN workspace_members ON workspace_members.workspace_id = workspaces.id").
-		Where("workspace_members.user_id = ? AND workspaces.status <> ?", userID, domain.WorkspaceStatusDeleted).
-		Order("workspaces.created_at ASC").
-		Scan(&rows).Error
+	rows, err := s.workspaceRepo.ListByUserID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -107,10 +103,11 @@ func (s *DocumentService) UpdateWorkspace(ctx context.Context, req UpdateWorkspa
 	if len(updates) == 0 {
 		return workspaceResponse(workspace, true), nil
 	}
-	if err := s.db.WithContext(ctx).Model(workspace).Updates(updates).Error; err != nil {
+	if err := s.workspaceRepo.Update(ctx, workspace.ID, updates); err != nil {
 		return nil, err
 	}
-	if err := s.db.WithContext(ctx).First(workspace, "id = ?", workspace.ID).Error; err != nil {
+	workspace, err = s.getActiveWorkspace(ctx, workspace.ID)
+	if err != nil {
 		return nil, err
 	}
 	return workspaceResponse(workspace, true), nil
@@ -123,7 +120,7 @@ func (s *DocumentService) DeleteWorkspace(ctx context.Context, userID, workspace
 	if err := s.requireWorkspaceOwner(ctx, workspaceID, userID); err != nil {
 		return err
 	}
-	return s.db.WithContext(ctx).Model(&domain.Workspace{}).Where("id = ?", workspaceID).Update("status", domain.WorkspaceStatusDeleted).Error
+	return s.workspaceRepo.SoftDelete(ctx, workspaceID)
 }
 
 func workspaceResponse(workspace *domain.Workspace, includeTime bool) *WorkspaceResponse {

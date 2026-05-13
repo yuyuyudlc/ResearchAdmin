@@ -41,9 +41,14 @@ type UpdateProfileRequest struct {
 	Supervisor        string
 }
 
+type WorkspaceCreator interface {
+	CreatePrivateWorkspace(ctx context.Context, userID string) error
+}
+
 type AuthService struct {
-	repo         domain.UserRepository
-	tokenManager *auth.TokenManager
+	repo             domain.UserRepository
+	tokenManager     *auth.TokenManager
+	workspaceCreator WorkspaceCreator
 }
 
 type LoginResult struct {
@@ -65,10 +70,11 @@ type UserResponse struct {
 	Status            string                   `json:"status"`
 }
 
-func NewAuthService(repo domain.UserRepository, tokenManager *auth.TokenManager) *AuthService {
+func NewAuthService(repo domain.UserRepository, tokenManager *auth.TokenManager, workspaceCreator WorkspaceCreator) *AuthService {
 	return &AuthService{
-		repo:         repo,
-		tokenManager: tokenManager,
+		repo:             repo,
+		tokenManager:     tokenManager,
+		workspaceCreator: workspaceCreator,
 	}
 }
 
@@ -104,7 +110,10 @@ func (s *AuthService) Register(ctx context.Context, req RegisterRequest) error {
 		Status:            "active",
 		PasswordHash:      passwordHash,
 	}
-	return s.repo.Create(ctx, user)
+	if err := s.repo.Create(ctx, user); err != nil {
+		return err
+	}
+	return s.workspaceCreator.CreatePrivateWorkspace(ctx, user.ID)
 }
 
 func (s *AuthService) ChangePassword(ctx context.Context, req ChangePasswordRequest) error {

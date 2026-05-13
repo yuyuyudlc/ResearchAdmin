@@ -16,8 +16,8 @@ func (s *DocumentService) ListMembers(ctx context.Context, userID, workspaceID s
 		return nil, ErrForbidden
 	}
 
-	var members []domain.WorkspaceMember
-	if err := s.db.WithContext(ctx).Where("workspace_id = ?", workspaceID).Order("created_at ASC").Find(&members).Error; err != nil {
+	members, err := s.workspaceMemberRepo.ListByWorkspace(ctx, workspaceID)
+	if err != nil {
 		return nil, err
 	}
 
@@ -60,7 +60,7 @@ func (s *DocumentService) AddMember(ctx context.Context, req UpsertWorkspaceMemb
 		UserID:      req.UserID,
 		Role:        req.Role,
 	}
-	if err := s.db.WithContext(ctx).Create(member).Error; err != nil {
+	if err := s.workspaceMemberRepo.Create(ctx, member); err != nil {
 		return nil, err
 	}
 	item := WorkspaceMemberItem{UserID: member.UserID, Role: member.Role, JoinedAt: member.CreatedAt}
@@ -85,7 +85,7 @@ func (s *DocumentService) UpdateMember(ctx context.Context, req UpsertWorkspaceM
 		}
 	}
 
-	if err := s.db.WithContext(ctx).Model(member).Update("role", req.Role).Error; err != nil {
+	if err := s.workspaceMemberRepo.UpdateRole(ctx, req.WorkspaceID, req.UserID, req.Role); err != nil {
 		return nil, err
 	}
 	item := WorkspaceMemberItem{UserID: member.UserID, Role: req.Role, JoinedAt: member.CreatedAt}
@@ -105,7 +105,7 @@ func (s *DocumentService) RemoveMember(ctx context.Context, operatorUserID, work
 			return err
 		}
 	}
-	return s.db.WithContext(ctx).Delete(member).Error
+	return s.workspaceMemberRepo.Delete(ctx, workspaceID, userID)
 }
 
 func (s *DocumentService) ensureWorkspaceKeepsOwner(ctx context.Context, workspaceID string) error {

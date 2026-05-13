@@ -17,8 +17,8 @@ func (s *DocumentService) ListACL(ctx context.Context, userID, documentID string
 		return nil, err
 	}
 
-	var acl []domain.DocACL
-	if err := s.db.WithContext(ctx).Where("document_id = ?", documentID).Order("created_at ASC").Find(&acl).Error; err != nil {
+	acl, err := s.docACLRepo.ListByDocument(ctx, documentID)
+	if err != nil {
 		return nil, err
 	}
 
@@ -50,7 +50,7 @@ func (s *DocumentService) CreateACL(ctx context.Context, req CreateACLRequest) (
 		Inherit:       req.Inherit,
 		CreatedBy:     req.UserID,
 	}
-	if err := s.db.WithContext(ctx).Create(acl).Error; err != nil {
+	if err := s.docACLRepo.Create(ctx, acl); err != nil {
 		return nil, err
 	}
 
@@ -67,9 +67,9 @@ func (s *DocumentService) UpdateACL(ctx context.Context, req UpdateACLRequest) (
 		return nil, err
 	}
 
-	var acl domain.DocACL
-	if err := s.db.WithContext(ctx).Where("id = ? AND document_id = ?", req.ACLID, req.DocumentID).First(&acl).Error; err != nil {
-		return nil, mapNotFound(err)
+	acl, err := s.docACLRepo.GetByID(ctx, req.ACLID, req.DocumentID)
+	if err != nil {
+		return nil, err
 	}
 
 	updates := map[string]any{}
@@ -83,15 +83,16 @@ func (s *DocumentService) UpdateACL(ctx context.Context, req UpdateACLRequest) (
 		updates["inherit"] = *req.Inherit
 	}
 	if len(updates) > 0 {
-		if err := s.db.WithContext(ctx).Model(&acl).Updates(updates).Error; err != nil {
+		if err := s.docACLRepo.Update(ctx, acl.ID, updates); err != nil {
 			return nil, err
 		}
-		if err := s.db.WithContext(ctx).First(&acl, "id = ?", acl.ID).Error; err != nil {
+		acl, err = s.docACLRepo.GetByID(ctx, acl.ID, req.DocumentID)
+		if err != nil {
 			return nil, err
 		}
 	}
 
-	resp := aclResponse(&acl)
+	resp := aclResponse(acl)
 	return &resp, nil
 }
 
@@ -104,12 +105,8 @@ func (s *DocumentService) DeleteACL(ctx context.Context, userID, documentID, acl
 		return err
 	}
 
-	result := s.db.WithContext(ctx).Where("id = ? AND document_id = ?", aclID, documentID).Delete(&domain.DocACL{})
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return ErrNotFound
+	if err := s.docACLRepo.Delete(ctx, aclID, documentID); err != nil {
+		return err
 	}
 	return nil
 }

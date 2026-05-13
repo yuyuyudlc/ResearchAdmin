@@ -73,19 +73,8 @@ func (s *DocumentService) matchedACL(ctx context.Context, doc *domain.Document, 
 		return nil, err
 	}
 
-	var acl []domain.DocACL
-	query := s.db.WithContext(ctx).Where(
-		"((document_id = ?) OR (document_id IN ? AND inherit = ?))",
-		doc.ID, inheritedIDs, true,
-	)
-	query = query.Where(
-		"(subject_type = ? AND subject_id = ?) OR subject_type = ?",
-		domain.ACLSubjectTypeUser, userID, domain.ACLSubjectTypePublic,
-	)
-	if err := query.Find(&acl).Error; err != nil {
-		return nil, err
-	}
-	return acl, nil
+	acl, err := s.docACLRepo.FindMatched(ctx, doc.ID, inheritedIDs, userID)
+	return acl, err
 }
 
 func (s *DocumentService) aclDocumentIDs(ctx context.Context, doc *domain.Document) ([]string, []string, error) {

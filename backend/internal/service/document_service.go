@@ -4,12 +4,10 @@ import (
 	"errors"
 
 	"research/internal/domain"
-
-	"gorm.io/gorm"
 )
 
 var (
-	ErrNotFound           = errors.New("资源不存在")
+	ErrNotFound           = domain.ErrNotFound
 	ErrForbidden          = errors.New("无权限")
 	ErrConflict           = errors.New("资源冲突")
 	ErrInvalidArgument    = errors.New("请求参数错误")
@@ -19,9 +17,25 @@ var (
 const fullPermission = domain.PermissionRead | domain.PermissionEdit | domain.PermissionManage
 
 type DocumentService struct {
-	db *gorm.DB
+	workspaceRepo      domain.WorkspaceRepository
+	workspaceMemberRepo domain.WorkspaceMemberRepository
+	documentRepo       domain.DocumentRepository
+	docACLRepo         domain.DocACLRepository
+	userRepo           domain.UserRepository
 }
 
-func NewDocumentService(db *gorm.DB) *DocumentService {
-	return &DocumentService{db: db}
+func NewDocumentService(
+	workspaceRepo domain.WorkspaceRepository,
+	workspaceMemberRepo domain.WorkspaceMemberRepository,
+	documentRepo domain.DocumentRepository,
+	docACLRepo domain.DocACLRepository,
+	userRepo domain.UserRepository,
+) *DocumentService {
+	return &DocumentService{
+		workspaceRepo:      workspaceRepo,
+		workspaceMemberRepo: workspaceMemberRepo,
+		documentRepo:       documentRepo,
+		docACLRepo:         docACLRepo,
+		userRepo:           userRepo,
+	}
 }

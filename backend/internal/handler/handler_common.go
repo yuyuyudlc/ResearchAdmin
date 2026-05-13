@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"research/internal/domain"
 	"research/internal/middleware"
 	"research/internal/response"
 	"research/internal/service"
@@ -26,7 +27,7 @@ func respondServiceError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, service.ErrForbidden):
 		response.Error(c, http.StatusForbidden, err.Error())
-	case errors.Is(err, service.ErrNotFound):
+	case errors.Is(err, domain.ErrNotFound), errors.Is(err, service.ErrNotFound):
 		response.Error(c, http.StatusNotFound, err.Error())
 	case errors.Is(err, service.ErrConflict):
 		response.Error(c, http.StatusConflict, err.Error())

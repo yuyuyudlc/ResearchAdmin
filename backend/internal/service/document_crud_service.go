@@ -43,7 +43,7 @@ func (s *DocumentService) CreateDocument(ctx context.Context, req CreateDocument
 		SortOrder:        sortOrder,
 		SourceStorageKey: strings.TrimSpace(req.SourceStorageKey),
 	}
-	if err := s.db.WithContext(ctx).Create(doc).Error; err != nil {
+	if err := s.documentRepo.Create(ctx, doc); err != nil {
 		return nil, err
 	}
 	return s.documentItemWithCurrentPermission(ctx, req.UserID, doc)
@@ -92,10 +92,11 @@ func (s *DocumentService) UpdateDocument(ctx context.Context, req UpdateDocument
 		updates["source_storage_key"] = strings.TrimSpace(*req.SourceStorageKey)
 	}
 	if len(updates) > 0 {
-		if err := s.db.WithContext(ctx).Model(doc).Updates(updates).Error; err != nil {
+		if err := s.documentRepo.Update(ctx, doc.ID, updates); err != nil {
 			return nil, err
 		}
-		if err := s.db.WithContext(ctx).First(doc, "id = ?", doc.ID).Error; err != nil {
+		doc, err = s.getDocument(ctx, doc.ID)
+		if err != nil {
 			return nil, err
 		}
 	}
@@ -124,10 +125,11 @@ func (s *DocumentService) MoveDocument(ctx context.Context, req MoveDocumentRequ
 		}
 		updates["sort_order"] = next
 	}
-	if err := s.db.WithContext(ctx).Model(doc).Updates(updates).Error; err != nil {
+	if err := s.documentRepo.Update(ctx, doc.ID, updates); err != nil {
 		return nil, err
 	}
-	if err := s.db.WithContext(ctx).First(doc, "id = ?", doc.ID).Error; err != nil {
+	doc, err = s.getDocument(ctx, doc.ID)
+	if err != nil {
 		return nil, err
 	}
 	return s.documentItemWithCurrentPermission(ctx, req.UserID, doc)
@@ -141,7 +143,7 @@ func (s *DocumentService) SetDocumentStatus(ctx context.Context, userID, documen
 	if err := s.requireDocumentPermission(ctx, userID, doc, domain.PermissionManage); err != nil {
 		return err
 	}
-	return s.db.WithContext(ctx).Model(doc).Update("status", status).Error
+	return s.documentRepo.Update(ctx, documentID, map[string]any{"status": status})
 }
 
 func (s *DocumentService) requireCreateDocumentPermission(ctx context.Context, req CreateDocumentRequest) error {

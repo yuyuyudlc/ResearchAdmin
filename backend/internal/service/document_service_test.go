@@ -7,6 +7,7 @@ import (
 
 	"research/internal/database"
 	"research/internal/domain"
+	"research/internal/repository"
 
 	"gorm.io/gorm"
 )
@@ -152,7 +153,14 @@ func newTestDocumentService(t *testing.T) (*DocumentService, *gorm.DB) {
 	if err != nil {
 		t.Fatalf("database.Open() error = %v", err)
 	}
-	return NewDocumentService(db), db
+	svc := NewDocumentService(
+		repository.NewWorkspaceRepository(db),
+		repository.NewWorkspaceMemberRepository(db),
+		repository.NewDocumentRepository(db),
+		repository.NewDocACLRepository(db),
+		repository.NewUserRepository(db),
+	)
+	return svc, db
 }
 
 func createTestUser(t *testing.T, db *gorm.DB, email string) domain.User {
