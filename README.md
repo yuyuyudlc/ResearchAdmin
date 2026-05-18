@@ -42,19 +42,32 @@ chmod +x scripts/*.sh
 
 ### 2. 启动项目
 
-#### 启动后端 (Go)
+本项目提供了一个集成启动脚本，可以同时启动后端 Go 服务、Node 协同服务和前端 Vite 服务。
+
+#### 快速启动（推荐）
+在根目录下运行：
+```powershell
+npm run dev
+```
+该脚本 (`scripts/dev.mjs`) 会：
+- 启动 **Go 后端** (`backend/main.go`)
+- 启动 **Node 协同服务** (`backend/node/src/server.js`)
+- 启动 **前端服务** (`Frontend`)
+
+#### 分步启动
+如果您需要调试特定模块，也可以手动启动：
+
+**启动后端 (Go)**
 ```powershell
 cd backend
 go run main.go
 ```
-后端默认运行在 `http://localhost:8080` (具体见 `backend/internal/config`)。
 
-#### 启动前端 (Vite)
+**启动前端 (Vite)**
 ```powershell
 cd Frontend
 pnpm dev
 ```
-前端默认运行在 `http://localhost:5173`。
 
 ## 脚本说明
 
