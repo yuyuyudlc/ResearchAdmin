@@ -58,9 +58,18 @@
 
 .searchButton {
   width: calc(100% - 24px);
-  margin: 0 12px 12px;
-  text-align: left;
+  margin: 0;
+  justify-content: flex-start;
+  color: #888;
+  background: #f5f5f5;
+  border: transparent;
   flex-shrink: 0;
+}
+
+.searchButton:global(.ant-btn-default):hover {
+  background: #ebebeb;
+  border-color: transparent;
+  color: #171717;
 }
 
 .sidebarWrap {

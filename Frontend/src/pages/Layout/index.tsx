@@ -66,6 +66,7 @@ export default function Layout() {
   const [passwordForm] = Form.useForm<PasswordFormValues>()
   const [profileSubmitting, setProfileSubmitting] = useState(false)
   const [passwordSubmitting, setPasswordSubmitting] = useState(false)
+  const [activeTab, setActiveTab] = useState('view')
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -226,8 +227,24 @@ export default function Layout() {
       <Modal
         title="个人信息"
         open={profileOpen}
-        onCancel={() => setProfileOpen(false)}
-        footer={<Button onClick={() => setProfileOpen(false)}>关闭</Button>}
+        onCancel={() => {
+          setProfileOpen(false)
+          setActiveTab('view')
+        }}
+        footer={
+          <div style={{ minHeight: 32, display: 'flex', justifyContent: 'flex-end' }}>
+            {activeTab === 'edit' && (
+              <Button type="primary" loading={profileSubmitting} onClick={submitProfile}>
+                保存
+              </Button>
+            )}
+            {activeTab === 'password' && (
+              <Button type="primary" loading={passwordSubmitting} onClick={submitPassword}>
+                修改密码
+              </Button>
+            )}
+          </div>
+        }
         width={640}
         destroyOnHidden
       >
@@ -241,78 +258,80 @@ export default function Layout() {
           </div>
         </Space>
         <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
           items={[
             {
               key: 'view',
               label: '基本信息',
               children: (
-                <Descriptions column={1} size="small" bordered>
-                  <Descriptions.Item label="用户ID">{user.id}</Descriptions.Item>
-                  <Descriptions.Item label="用户名">{user.username || '-'}</Descriptions.Item>
-                  <Descriptions.Item label="邮箱">{user.email || '-'}</Descriptions.Item>
-                  <Descriptions.Item label="所属机构">{user.organization || '-'}</Descriptions.Item>
-                  <Descriptions.Item label="职称">{user.professionalTitle || '-'}</Descriptions.Item>
-                  <Descriptions.Item label="导师">{user.supervisor || '-'}</Descriptions.Item>
-                </Descriptions>
+                <div style={{ height: 420, overflowY: 'auto', paddingRight: 8 }}>
+                  <Descriptions column={1} size="small" bordered>
+                    <Descriptions.Item label="用户ID">{user.id}</Descriptions.Item>
+                    <Descriptions.Item label="用户名">{user.username || '-'}</Descriptions.Item>
+                    <Descriptions.Item label="邮箱">{user.email || '-'}</Descriptions.Item>
+                    <Descriptions.Item label="所属机构">{user.organization || '-'}</Descriptions.Item>
+                    <Descriptions.Item label="职称">{user.professionalTitle || '-'}</Descriptions.Item>
+                    <Descriptions.Item label="导师">{user.supervisor || '-'}</Descriptions.Item>
+                  </Descriptions>
+                </div>
               ),
             },
             {
               key: 'edit',
               label: '编辑资料',
               children: (
-                <Form form={profileForm} layout="vertical" requiredMark={false}>
-                  <Form.Item label="用户名" name="username" rules={[{ required: true, message: '请输入用户名' }]}>
-                    <Input />
-                  </Form.Item>
-                  <Form.Item label="邮箱" name="email" rules={[{ type: 'email', message: '邮箱格式不正确' }]}>
-                    <Input />
-                  </Form.Item>
-                  <Form.Item label="所属机构" name="organization">
-                    <Input />
-                  </Form.Item>
-                  <Form.Item label="头像地址" name="avatar_url">
-                    <Input placeholder="https://..." />
-                  </Form.Item>
-                  <Form.Item label="个性签名" name="signature">
-                    <Input.TextArea rows={2} />
-                  </Form.Item>
-                  <Form.Item label="职称" name="professional_title">
-                    <Input />
-                  </Form.Item>
-                  <Form.Item label="导师" name="supervisor">
-                    <Input />
-                  </Form.Item>
-                  <Button type="primary" loading={profileSubmitting} onClick={submitProfile}>
-                    保存
-                  </Button>
-                </Form>
+                <div style={{ height: 420, overflowY: 'auto', paddingRight: 8 }}>
+                  <Form form={profileForm} layout="vertical" requiredMark={false}>
+                    <Form.Item label="用户名" name="username" rules={[{ required: true, message: '请输入用户名' }]}>
+                      <Input />
+                    </Form.Item>
+                    <Form.Item label="邮箱" name="email" rules={[{ type: 'email', message: '邮箱格式不正确' }]}>
+                      <Input />
+                    </Form.Item>
+                    <Form.Item label="所属机构" name="organization">
+                      <Input />
+                    </Form.Item>
+                    <Form.Item label="头像地址" name="avatar_url">
+                      <Input placeholder="https://..." />
+                    </Form.Item>
+                    <Form.Item label="个性签名" name="signature">
+                      <Input.TextArea rows={2} />
+                    </Form.Item>
+                    <Form.Item label="职称" name="professional_title">
+                      <Input />
+                    </Form.Item>
+                    <Form.Item label="导师" name="supervisor">
+                      <Input />
+                    </Form.Item>
+                  </Form>
+                </div>
               ),
             },
             {
               key: 'password',
               label: '修改密码',
               children: (
-                <Form form={passwordForm} layout="vertical" requiredMark={false}>
-                  <Form.Item label="旧密码" name="old_password" rules={[{ required: true, message: '请输入旧密码' }]}>
-                    <Input.Password />
-                  </Form.Item>
-                  <Form.Item
-                    label="新密码"
-                    name="new_password"
-                    rules={[
-                      { required: true, message: '请输入新密码' },
-                      { min: 6, message: '密码至少 6 位' },
-                    ]}
-                  >
-                    <Input.Password />
-                  </Form.Item>
-                  <Form.Item label="确认新密码" name="confirm_password" rules={[{ required: true, message: '请再次输入新密码' }]}>
-                    <Input.Password />
-                  </Form.Item>
-                  <Button type="primary" loading={passwordSubmitting} onClick={submitPassword}>
-                    修改密码
-                  </Button>
-                </Form>
+                <div style={{ height: 420, overflowY: 'auto', paddingRight: 8 }}>
+                  <Form form={passwordForm} layout="vertical" requiredMark={false}>
+                    <Form.Item label="旧密码" name="old_password" rules={[{ required: true, message: '请输入旧密码' }]}>
+                      <Input.Password />
+                    </Form.Item>
+                    <Form.Item
+                      label="新密码"
+                      name="new_password"
+                      rules={[
+                        { required: true, message: '请输入新密码' },
+                        { min: 6, message: '密码至少 6 位' },
+                      ]}
+                    >
+                      <Input.Password />
+                    </Form.Item>
+                    <Form.Item label="确认新密码" name="confirm_password" rules={[{ required: true, message: '请再次输入新密码' }]}>
+                      <Input.Password />
+                    </Form.Item>
+                  </Form>
+                </div>
               ),
             },
           ]}
