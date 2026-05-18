@@ -1,0 +1,4 @@
+interface:
+  display_name: "Research Admin Frontend"
+  short_description: "ResearchAdmin 前端工程、antd 业务组件、tiptap 文档编辑器与设计规范"
+  default_prompt: "使用 research-admin-frontend skill 帮我开发或重构 ResearchAdmin 前端，遵循项目 Frontend/rules/rules.md 和 Design.md，业务组件用 antd，富文本用 tiptap。"

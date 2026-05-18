@@ -1,0 +1,93 @@
+.page {
+  padding: 24px 32px 48px;
+  background: #fff;
+  min-height: calc(100vh - 64px);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.unreadDot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ff4d4f;
+}
+
+.icon {
+  font-size: 16px;
+}
+
+.titleLink {
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.titleLink:hover {
+  color: #1677ff;
+}
+
+.table {
+  margin-bottom: 32px;
+}
+
+.table :global(.ant-table-thead) > tr > th {
+  background: #fafafa;
+}
+
+.table :global(.ant-table-tbody) > tr {
+  cursor: pointer;
+}
+
+.teamBlock {
+  margin-top: 16px;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 24px;
+}
+
+.teamHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.teamGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.teamCard {
+  min-width: 0;
+}
+
+.teamAvatar {
+  width: 40px;
+  height: 40px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #171717;
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.teamName {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.teamDesc {
+  font-size: 12px;
+  display: block;
+  max-width: 180px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -1,0 +1,14 @@
+{
+  "name": "research-yjs-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0",
+    "yjs": "^13.6.22",
+    "y-websocket": "^2.1.0"
+  }
+}

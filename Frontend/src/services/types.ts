@@ -1,0 +1,241 @@
+export interface ApiResponse<T = unknown> {
+  code: number
+  message: string
+  data: T
+}
+
+export interface User {
+  id: string
+  username: string
+  email: string
+  organization: string
+  avatarUrl: string
+  signature: string
+  professionalTitle: string
+  supervisor: string
+  displayName: string
+}
+
+export interface LoginRequest {
+  email: string
+  password: string
+}
+
+export interface LoginResponse {
+  accessToken: string
+  expiresIn: number
+  user: User
+}
+
+export interface RegisterRequest {
+  username: string
+  email: string
+  password: string
+  organization: string
+  avatar_url: string
+  signature: string
+  professional_title: string
+  supervisor: string
+}
+
+export interface ChangePasswordRequest {
+  old_password: string
+  new_password: string
+}
+
+export interface UpdateProfileRequest {
+  username: string
+  email: string
+  organization: string
+  avatar_url: string
+  signature: string
+  professional_title: string
+  supervisor: string
+}
+
+export interface Workspace {
+  id: string
+  name: string
+  description: string
+  ownerUserId: string
+  role?: string
+  status: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface WorkspaceListResponse {
+  items: Workspace[]
+}
+
+export interface CreateWorkspaceRequest {
+  name: string
+  description: string
+}
+
+export interface UpdateWorkspaceRequest {
+  name?: string
+  description?: string
+  status?: string
+}
+
+export interface DocumentNode {
+  id: string
+  workspaceId: string
+  parentId: string | null
+  title: string
+  summary: string
+  ownerUserId: string
+  docType: string
+  status: string
+  sortOrder: number
+  permissionBit: number
+  hasChildren: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface WorkspaceMember {
+  userId: string
+  role: string
+  joinedAt: string
+}
+
+export interface WorkspaceDirectoryResponse {
+  workspace: Workspace
+  currentMember: WorkspaceMember
+  parent: DocumentNode | null
+  items: DocumentNode[]
+  nextCursor: string | null
+}
+
+export interface CreateDocumentRequest {
+  parentId: string | null
+  title: string
+  summary: string
+  docType: string
+}
+
+export interface UpdateDocumentRequest {
+  title?: string
+  summary?: string
+  sourceStorageKey?: string
+}
+
+export interface MoveDocumentRequest {
+  parentId: string | null
+  sortOrder: number
+}
+
+export interface AddMemberRequest {
+  userId: string
+  role: string
+}
+
+export interface UpdateMemberRequest {
+  role: string
+}
+
+export interface ACLItem {
+  id: string
+  workspaceId: string
+  documentId: string
+  subjectType: string
+  subjectId: string | null
+  permissionBit: number
+  inherit: boolean
+  createdBy: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ACLListResponse {
+  items: ACLItem[]
+}
+
+export interface CreateACLRequest {
+  subjectType: string
+  subjectId: string | null
+  permissionBit: number
+  inherit: boolean
+}
+
+export interface UpdateACLRequest {
+  permissionBit?: number
+  inherit?: boolean
+}
+
+export interface MyPermissionResponse {
+  documentId: string
+  permissionBit: number
+  canRead: boolean
+  canEdit: boolean
+  canManage: boolean
+}
+
+export interface Comment {
+  id: string
+  documentId: string
+  userId: string
+  content: string
+  status: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CommentListResponse {
+  items: Comment[]
+}
+
+export interface CreateCommentRequest {
+  content: string
+}
+
+export interface UpdateCommentStatusRequest {
+  status: string
+}
+
+export interface DocumentBodyResponse {
+  documentId: string
+  body: string
+  version: number
+  updatedAt: string
+}
+
+export interface PutBodyRequest {
+  body: string
+}
+
+export interface UserListResponse {
+  items: User[]
+}
+
+export interface SearchRequest {
+  q?: string
+  workspaceId?: string
+  parentId?: string
+  docType?: string
+  ownerUserId?: string
+  status?: string
+  page?: number
+  pageSize?: number
+}
+
+export const PERMISSION = {
+  READ: 1,
+  EDIT: 2,
+  MANAGE: 4,
+  DENY: 8,
+} as const
+
+export function canRead(bit: number): boolean {
+  return (bit & PERMISSION.READ) !== 0
+}
+
+export function canEdit(bit: number): boolean {
+  return (bit & PERMISSION.EDIT) !== 0
+}
+
+export function canManage(bit: number): boolean {
+  return (bit & PERMISSION.MANAGE) !== 0
+}

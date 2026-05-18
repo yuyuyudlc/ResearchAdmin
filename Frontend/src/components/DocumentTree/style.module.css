@@ -1,0 +1,132 @@
+.tree {
+  width: 100%;
+  font-size: 13px;
+}
+
+.empty {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rootDrop {
+  min-height: 80px;
+  padding: 4px 0 24px;
+}
+
+.nodeBlock {
+  position: relative;
+}
+
+.children {
+  /* 整体缩进子节点，并在最左侧画一条细竖线表示层级 */
+  margin-left: 14px;
+  padding-left: 8px;
+  border-left: 1px solid #e8e8e8;
+}
+
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  /* 给 actions 预留右侧空间，actions 用绝对定位，不会挤压 title */
+  padding-left: 4px;
+  padding-right: 56px;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 4px;
+  margin: 1px 6px;
+  transition: background 0.15s;
+  overflow: hidden;
+}
+
+.row:hover {
+  background: #f0f0f0;
+}
+
+.rowActive {
+  background: #e6f4ff;
+  color: #1677ff;
+}
+
+.rowActive:hover {
+  background: #d6ecff;
+}
+
+.rowDropInside {
+  outline: 2px solid #1677ff;
+  outline-offset: -2px;
+  background: #e6f4ff;
+}
+
+.rowDragging {
+  opacity: 0.4;
+}
+
+.toggle {
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  flex-shrink: 0;
+}
+
+.icon {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #595959;
+}
+
+.rowActive .icon {
+  color: #1677ff;
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: none;
+  align-items: center;
+  gap: 2px;
+  padding-left: 6px;
+  /* hover 时背景与 row hover 同色，遮挡被截断的 title */
+  background: linear-gradient(to right, transparent, #f0f0f0 10px);
+  border-radius: 0 4px 4px 0;
+}
+
+.row:hover .actions {
+  display: inline-flex;
+}
+
+.rowActive .actions {
+  background: linear-gradient(to right, transparent, #e6f4ff 10px);
+}
+
+.rowActive:hover .actions {
+  background: linear-gradient(to right, transparent, #d6ecff 10px);
+}
+
+.dropIndicatorLine {
+  height: 2px;
+  background: #1677ff;
+  margin: 0 12px;
+  border-radius: 1px;
+}

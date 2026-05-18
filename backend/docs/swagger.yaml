@@ -1,0 +1,1243 @@
+basePath: /api/v1
+definitions:
+  domain.ACLSubjectType:
+    enum:
+    - user
+    - public
+    type: string
+    x-enum-varnames:
+    - ACLSubjectTypeUser
+    - ACLSubjectTypePublic
+  domain.DocumentType:
+    enum:
+    - rich_text
+    - file
+    type: string
+    x-enum-varnames:
+    - DocumentTypeRichText
+    - DocumentTypeFile
+  domain.ProfessionalTitle:
+    enum:
+    - professor
+    - associate_professor
+    - lecturer
+    - researcher
+    - engineer
+    - doctoral_student
+    - master_student
+    - other
+    type: string
+    x-enum-varnames:
+    - ProfessionalTitleProfessor
+    - ProfessionalTitleAssociateProfessor
+    - ProfessionalTitleLecturer
+    - ProfessionalTitleResearcher
+    - ProfessionalTitleEngineer
+    - ProfessionalTitleDoctoralStudent
+    - ProfessionalTitleMasterStudent
+    - ProfessionalTitleOther
+  domain.WorkspaceMemberRole:
+    enum:
+    - owner
+    - member
+    type: string
+    x-enum-varnames:
+    - WorkspaceMemberRoleOwner
+    - WorkspaceMemberRoleMember
+  domain.WorkspaceStatus:
+    enum:
+    - active
+    - deleted
+    type: string
+    x-enum-varnames:
+    - WorkspaceStatusActive
+    - WorkspaceStatusDeleted
+  handler.ChangePasswordRequest:
+    properties:
+      new_password:
+        type: string
+      old_password:
+        type: string
+    required:
+    - new_password
+    - old_password
+    type: object
+  handler.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  handler.RegisterRequest:
+    properties:
+      avatar_url:
+        type: string
+      email:
+        type: string
+      organization:
+        type: string
+      password:
+        type: string
+      professional_title:
+        $ref: '#/definitions/domain.ProfessionalTitle'
+      signature:
+        type: string
+      supervisor:
+        type: string
+      username:
+        type: string
+    required:
+    - email
+    - password
+    - username
+    type: object
+  handler.UpdateProfileRequest:
+    properties:
+      avatar_url:
+        type: string
+      email:
+        type: string
+      organization:
+        type: string
+      professional_title:
+        $ref: '#/definitions/domain.ProfessionalTitle'
+      signature:
+        type: string
+      supervisor:
+        type: string
+      username:
+        type: string
+    required:
+    - email
+    - username
+    type: object
+  handler.createACLRequest:
+    properties:
+      inherit:
+        type: boolean
+      permissionBit:
+        type: integer
+      subjectId:
+        type: string
+      subjectType:
+        $ref: '#/definitions/domain.ACLSubjectType'
+    required:
+    - permissionBit
+    - subjectType
+    type: object
+  handler.createDocumentRequest:
+    properties:
+      docType:
+        $ref: '#/definitions/domain.DocumentType'
+      parentId:
+        type: string
+      sourceStorageKey:
+        type: string
+      summary:
+        type: string
+      title:
+        type: string
+    required:
+    - title
+    type: object
+  handler.createWorkspaceRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  handler.memberRequest:
+    properties:
+      role:
+        $ref: '#/definitions/domain.WorkspaceMemberRole'
+      userId:
+        type: string
+    required:
+    - role
+    - userId
+    type: object
+  handler.moveDocumentRequest:
+    properties:
+      parentId:
+        type: string
+      sortOrder:
+        type: integer
+    type: object
+  handler.updateACLRequest:
+    properties:
+      inherit:
+        type: boolean
+      permissionBit:
+        type: integer
+    type: object
+  handler.updateDocumentRequest:
+    properties:
+      sourceStorageKey:
+        type: string
+      summary:
+        type: string
+      title:
+        type: string
+    type: object
+  handler.updateMemberRequest:
+    properties:
+      role:
+        $ref: '#/definitions/domain.WorkspaceMemberRole'
+    required:
+    - role
+    type: object
+  handler.updateWorkspaceRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      status:
+        $ref: '#/definitions/domain.WorkspaceStatus'
+    type: object
+  response.Body:
+    properties:
+      code:
+        type: integer
+      data: {}
+      message:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: 科研项目文档管理系统后端 API。
+  title: Research Admin Backend API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: 使用邮箱和密码登录，返回 JWT 访问令牌和用户信息。
+      parameters:
+      - description: 登录参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 用户登录
+      tags:
+      - auth
+  /auth/password:
+    put:
+      consumes:
+      - application/json
+      description: 修改当前登录用户的密码。
+      parameters:
+      - description: 修改密码参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 修改密码
+      tags:
+      - auth
+  /auth/profile:
+    put:
+      consumes:
+      - application/json
+      description: 修改当前登录用户的个人资料。
+      parameters:
+      - description: 个人资料参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 修改个人信息
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: 创建新用户账号。
+      parameters:
+      - description: 注册参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Body'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Body'
+      summary: 注册账号
+      tags:
+      - auth
+  /documents/{documentId}:
+    delete:
+      description: 软删除文档。
+      parameters:
+      - description: 文档 ID
+        in: path
+        name: documentId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 删除文档
+      tags:
+      - documents
+    get:
+      description: 返回单个文档元数据和当前用户最终权限。
+      parameters:
+      - description: 文档 ID
+        in: path
+        name: documentId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 获取文档详情
+      tags:
+      - documents
+    patch:
+      consumes:
+      - application/json
+      description: 更新文档元数据，不处理正文内容。
+      parameters:
+      - description: 文档 ID
+        in: path
+        name: documentId
+        required: true
+        type: string
+      - description: 文档更新参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.updateDocumentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 更新文档元数据
+      tags:
+      - documents
+  /documents/{documentId}/acl:
+    get:
+      description: 返回文档上显式配置的 ACL 规则，不包含 workspace 默认权限。
+      parameters:
+      - description: 文档 ID
+        in: path
+        name: documentId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 获取文档 ACL
+      tags:
+      - document-acl
+    post:
+      consumes:
+      - application/json
+      description: 为文档新增一条 ACL 规则。
+      parameters:
+      - description: 文档 ID
+        in: path
+        name: documentId
+        required: true
+        type: string
+      - description: ACL 参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.createACLRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Body'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 新增文档 ACL
+      tags:
+      - document-acl
+  /documents/{documentId}/acl/{aclId}:
+    delete:
+      description: 删除文档上的指定 ACL 规则。
+      parameters:
+      - description: 文档 ID
+        in: path
+        name: documentId
+        required: true
+        type: string
+      - description: ACL ID
+        in: path
+        name: aclId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 删除文档 ACL
+      tags:
+      - document-acl
+    patch:
+      consumes:
+      - application/json
+      description: 更新文档上的指定 ACL 规则。
+      parameters:
+      - description: 文档 ID
+        in: path
+        name: documentId
+        required: true
+        type: string
+      - description: ACL ID
+        in: path
+        name: aclId
+        required: true
+        type: string
+      - description: ACL 更新参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.updateACLRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 更新文档 ACL
+      tags:
+      - document-acl
+  /documents/{documentId}/archive:
+    post:
+      description: 将文档标记为 archived。
+      parameters:
+      - description: 文档 ID
+        in: path
+        name: documentId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 归档文档
+      tags:
+      - documents
+  /documents/{documentId}/download:
+    get:
+      description: 返回文件型文档的存储引用。
+      parameters:
+      - description: 文档 ID
+        in: path
+        name: documentId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 下载文件型文档
+      tags:
+      - documents
+  /documents/{documentId}/move:
+    post:
+      consumes:
+      - application/json
+      description: 移动文档到新的父节点并更新排序。
+      parameters:
+      - description: 文档 ID
+        in: path
+        name: documentId
+        required: true
+        type: string
+      - description: 移动参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.moveDocumentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 移动文档
+      tags:
+      - documents
+  /documents/{documentId}/my-permission:
+    get:
+      description: 返回当前用户对文档的最终权限位。
+      parameters:
+      - description: 文档 ID
+        in: path
+        name: documentId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 获取我的文档权限
+      tags:
+      - document-acl
+  /documents/{documentId}/restore:
+    post:
+      description: 将归档文档恢复为 active。
+      parameters:
+      - description: 文档 ID
+        in: path
+        name: documentId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 恢复文档
+      tags:
+      - documents
+  /workspaces:
+    get:
+      description: 返回当前登录用户加入的 workspace 列表。
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 获取 Workspace 列表
+      tags:
+      - workspaces
+    post:
+      consumes:
+      - application/json
+      description: 创建 workspace，并把当前登录用户设置为 owner。
+      parameters:
+      - description: Workspace 参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.createWorkspaceRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Body'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 创建 Workspace
+      tags:
+      - workspaces
+  /workspaces/{workspaceId}:
+    delete:
+      description: 软删除 workspace，仅 workspace owner 可操作。
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 删除 Workspace
+      tags:
+      - workspaces
+    get:
+      description: 返回 workspace 根目录或指定父文档的一层直接子节点，并按当前用户权限过滤。
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      - description: 父文档 ID
+        in: query
+        name: parentId
+        type: string
+      - description: 文档状态
+        in: query
+        name: status
+        type: string
+      - description: 返回数量
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 获取 Workspace 目录子节点
+      tags:
+      - workspaces
+    patch:
+      consumes:
+      - application/json
+      description: 更新 workspace 元数据，仅 workspace owner 可操作。
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      - description: Workspace 更新参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.updateWorkspaceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 更新 Workspace
+      tags:
+      - workspaces
+  /workspaces/{workspaceId}/documents:
+    post:
+      consumes:
+      - application/json
+      description: 在 workspace 下创建文档元数据。根文档要求 workspace 成员权限，子文档要求父文档 EDIT 权限。
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      - description: 文档参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.createDocumentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Body'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 创建文档
+      tags:
+      - documents
+  /workspaces/{workspaceId}/documents/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 创建文件型文档元数据，真实文件存储由后续存储模块接入。
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      - description: 上传文件
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: 父文档 ID
+        in: formData
+        name: parentId
+        type: string
+      - description: 文档标题
+        in: formData
+        name: title
+        type: string
+      - description: 文档摘要
+        in: formData
+        name: summary
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Body'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 上传文件型文档
+      tags:
+      - documents
+  /workspaces/{workspaceId}/members:
+    get:
+      description: 返回 workspace 当前成员列表。
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 获取 Workspace 成员列表
+      tags:
+      - workspace-members
+    post:
+      consumes:
+      - application/json
+      description: 向 workspace 添加成员，仅 workspace owner 可操作。
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      - description: 成员参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.memberRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Body'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 添加 Workspace 成员
+      tags:
+      - workspace-members
+  /workspaces/{workspaceId}/members/{userId}:
+    delete:
+      description: 移除 workspace 成员，并保护最后一个 owner。
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      - description: 用户 ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 移除 Workspace 成员
+      tags:
+      - workspace-members
+    patch:
+      consumes:
+      - application/json
+      description: 修改 workspace 成员角色，并保护最后一个 owner。
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      - description: 用户 ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      - description: 成员角色参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.updateMemberRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 修改 Workspace 成员角色
+      tags:
+      - workspace-members
+securityDefinitions:
+  BearerAuth:
+    description: 输入 Bearer Token，格式：Bearer {token}
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

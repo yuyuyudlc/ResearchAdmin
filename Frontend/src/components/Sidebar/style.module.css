@@ -1,0 +1,208 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  padding-top: 4px;
+}
+
+.entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+
+.entry:hover {
+  background: #f0f0f0;
+}
+
+.entryActive {
+  background: #e6f4ff;
+  color: #1677ff;
+}
+
+.entryActive:hover {
+  background: #d6ecff;
+}
+
+.entryIcon {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #595959;
+}
+
+.entryActive .entryIcon,
+.sectionHeaderActive .entryIcon {
+  color: #1677ff;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex-shrink: 0;
+}
+
+/* 让第二个 section（团队）撑满剩余 + 滚动 */
+.section:last-of-type {
+  flex: 1;
+  min-height: 0;
+}
+
+.sectionHeader {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 8px 2px;
+  padding: 6px 8px;
+  padding-right: 56px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #555;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+  overflow: hidden;
+}
+
+.sectionHeader:hover {
+  background: #f0f0f0;
+}
+
+.sectionHeaderActive {
+  color: #1677ff;
+}
+
+.sectionTitle {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sectionActions {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: none;
+  align-items: center;
+  gap: 2px;
+  padding-left: 6px;
+  background: linear-gradient(to right, transparent, #f0f0f0 10px);
+  border-radius: 0 6px 6px 0;
+}
+
+.sectionHeader:hover .sectionActions {
+  display: inline-flex;
+}
+
+.caret {
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  flex-shrink: 0;
+}
+
+.sectionBody {
+  overflow-y: auto;
+  max-height: 100%;
+  /* 子内容整体相对 sectionHeader 缩进，呈现层级感
+     对齐到 caret + icon 之后的标题起点 */
+  padding-left: 16px;
+}
+
+.section:last-of-type .sectionBody {
+  flex: 1;
+  min-height: 0;
+}
+
+.placeholder {
+  padding: 8px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wsBlock {
+  margin-bottom: 2px;
+}
+
+.wsHeader {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 8px;
+  padding: 6px 8px;
+  padding-right: 40px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+  overflow: hidden;
+}
+
+.wsHeader:hover {
+  background: #f0f0f0;
+}
+
+.wsHeaderActive {
+  background: #e6f4ff;
+  color: #1677ff;
+}
+
+.wsHeader .sectionActions {
+  background: linear-gradient(to right, transparent, #f0f0f0 10px);
+}
+
+.wsHeaderActive .sectionActions {
+  background: linear-gradient(to right, transparent, #e6f4ff 10px);
+}
+
+.wsHeader:hover .sectionActions {
+  display: inline-flex;
+}
+
+.wsIcon {
+  width: 20px;
+  height: 20px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 4px;
+  background: #171717;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.wsName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wsTree {
+  /* 让 ws 下的文档树相对 ws 标题再缩进，呈现"工作区 → 文档"层级 */
+  padding-left: 16px;
+}

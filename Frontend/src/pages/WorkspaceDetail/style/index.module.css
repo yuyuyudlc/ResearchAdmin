@@ -1,0 +1,58 @@
+.page {
+  padding: 32px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.back {
+  padding: 0 !important;
+  margin-bottom: 4px;
+}
+
+.title {
+  margin: 0 0 4px !important;
+}
+
+.breadcrumb {
+  margin: 8px 0 16px;
+  cursor: default;
+}
+
+.alert {
+  margin-bottom: 16px;
+}
+
+.list {
+  background: #fff;
+  border: 1px solid #ebebeb;
+  border-radius: 8px;
+  padding: 0 16px;
+}
+
+.nodeIcon {
+  display: inline-flex;
+  align-items: center;
+  font-size: 16px;
+  color: #595959;
+}
+
+.nodeTitle {
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.nodeTitle:hover {
+  color: #1677ff;
+}
+
+@media (max-width: 720px) {
+  .page {
+    padding: 20px;
+  }
+}
