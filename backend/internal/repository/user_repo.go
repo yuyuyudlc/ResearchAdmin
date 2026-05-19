@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"research/internal/domain"
@@ -78,4 +79,97 @@ func (r *userRepo) UpdateLastLoginAt(ctx context.Context, userID string, lastLog
 		Where("id = ?", userID).
 		Update("last_login_at", lastLoginAt).
 		Error
+}
+
+func (r *userRepo) AdminUpdate(ctx context.Context, userID string, update domain.AdminUserUpdate) error {
+	return r.db.WithContext(ctx).
+		Model(&domain.User{}).
+		Where("id = ?", userID).
+		Updates(map[string]any{
+			"username":           update.Username,
+			"email":              update.Email,
+			"avatar_url":         update.AvatarURL,
+			"signature":          update.Signature,
+			"professional_title": update.ProfessionalTitle,
+			"supervisor":         update.Supervisor,
+			"display_name":       update.DisplayName,
+		}).Error
+}
+
+func (r *userRepo) UpdateStatus(ctx context.Context, userID, status string) error {
+	return r.db.WithContext(ctx).
+		Model(&domain.User{}).
+		Where("id = ?", userID).
+		Update("status", status).Error
+}
+
+// UpdateOrganization 同步更新 organization_id 与冗余 organization 字段。
+// orgID == nil 表示「未分配」，orgName 期望传空串。
+func (r *userRepo) UpdateOrganization(ctx context.Context, userID string, orgID *string, orgName string) error {
+	return r.db.WithContext(ctx).
+		Model(&domain.User{}).
+		Where("id = ?", userID).
+		Updates(map[string]any{
+			"organization_id": orgID,
+			"organization":    orgName,
+		}).Error
+}
+
+func (r *userRepo) Delete(ctx context.Context, userID string) error {
+	return r.db.WithContext(ctx).Where("id = ?", userID).Delete(&domain.User{}).Error
+}
+
+// List 管理员侧列表，按机构 + 搜索 + 分页。
+func (r *userRepo) List(ctx context.Context, filter domain.UserListFilter) ([]*domain.User, int64, error) {
+	if filter.Page <= 0 {
+		filter.Page = 1
+	}
+	if filter.PageSize <= 0 {
+		filter.PageSize = 20
+	}
+	if filter.PageSize > 100 {
+		filter.PageSize = 100
+	}
+
+	query := r.db.WithContext(ctx).Model(&domain.User{})
+	switch {
+	case filter.OrganizationID != nil:
+		query = query.Where("organization_id = ?", *filter.OrganizationID)
+	case filter.IncludeUnassigned:
+		query = query.Where("organization_id IS NULL")
+	}
+
+	if q := strings.TrimSpace(filter.Q); q != "" {
+		like := "%" + q + "%"
+		query = query.Where("username LIKE ? OR email LIKE ? OR display_name LIKE ?", like, like, like)
+	}
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var users []*domain.User
+	err := query.
+		Order("created_at DESC").
+		Limit(filter.PageSize).
+		Offset((filter.Page - 1) * filter.PageSize).
+		Find(&users).Error
+	if err != nil {
+		return nil, 0, err
+	}
+	return users, total, nil
+}
+
+// MoveAllByOrganization 批量把 fromOrgID 下的用户搬到 toOrgID。
+// toOrgID == nil 表示搬到「未分配」。返回受影响行数。
+func (r *userRepo) MoveAllByOrganization(ctx context.Context, fromOrgID string, toOrgID *string, toOrgName string) (int64, error) {
+	tx := r.db.WithContext(ctx).
+		Model(&domain.User{}).
+		Where("organization_id = ?", fromOrgID).
+		Updates(map[string]any{
+			"organization_id": toOrgID,
+			"organization":    toOrgName,
+		})
+	return tx.RowsAffected, tx.Error
 }

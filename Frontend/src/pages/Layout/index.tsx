@@ -47,6 +47,7 @@ interface PasswordFormValues {
 function getPageTitle(pathname: string): string {
   if (pathname.startsWith('/documents')) return '文档'
   if (pathname.startsWith('/workspaces')) return '团队空间'
+  if (pathname.startsWith('/admin/users')) return '管理人员'
   if (pathname === '/' || pathname === '') return '首页'
   return '科研云文档'
 }

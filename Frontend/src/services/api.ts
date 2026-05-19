@@ -39,7 +39,21 @@ async function request<T>(
 
   handleUnauthorized(response, options.skipAuthRedirect)
 
-  const data: ApiResponse<T> = await response.json()
+  // 容错：后端在 404/500 等情况下可能返回纯文本（如 Gin 的 "404 page not found"）。
+  // 直接 json() 会抛 "Unexpected non-whitespace character after JSON"，
+  // 这里改为先按文本读，再尝试解析为 JSON。
+  const text = await response.text()
+  let data: ApiResponse<T> | null = null
+  try {
+    data = text ? (JSON.parse(text) as ApiResponse<T>) : null
+  } catch {
+    // 非 JSON 响应
+  }
+
+  if (!data) {
+    const fallback = text?.trim() || response.statusText || `HTTP ${response.status}`
+    throw new Error(`${response.status} ${fallback}`)
+  }
 
   if (data.code !== 0) {
     throw new Error(data.message || 'Request failed')

@@ -30,6 +30,7 @@ func main() {
 
 	tokenManager := auth.NewTokenManager(cfg.JWT.Secret, cfg.JWT.TTL)
 	userRepo := repository.NewUserRepository(db)
+	organizationRepo := repository.NewOrganizationRepository(db)
 	workspaceRepo := repository.NewWorkspaceRepository(db)
 	workspaceMemberRepo := repository.NewWorkspaceMemberRepository(db)
 	documentRepo := repository.NewDocumentRepository(db)
@@ -37,9 +38,13 @@ func main() {
 	bodyRepo := repository.NewDocumentBodyRepository(db)
 	documentService := service.NewDocumentService(workspaceRepo, workspaceMemberRepo, documentRepo, docACLRepo, userRepo, bodyRepo)
 	authService := service.NewAuthService(userRepo, tokenManager, documentService)
+	adminOrgService := service.NewAdminOrganizationService(organizationRepo, userRepo)
+	adminUserService := service.NewAdminUserService(userRepo, organizationRepo, authService)
 	authHandler := handler.NewAuthHandler(authService)
 	documentHandler := handler.NewDocumentHandler(documentService)
-	r := router.New(authHandler, documentHandler, tokenManager)
+	adminUserHandler := handler.NewAdminUserHandler(adminUserService)
+	adminOrgHandler := handler.NewAdminOrganizationHandler(adminOrgService)
+	r := router.New(authHandler, documentHandler, adminUserHandler, adminOrgHandler, tokenManager)
 
 	log.Printf("Server starting on %s...", cfg.HTTPAddr)
 	if err := r.Run(cfg.HTTPAddr); err != nil {

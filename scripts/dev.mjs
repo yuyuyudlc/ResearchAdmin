@@ -146,15 +146,45 @@ function pickFrontendRunner() {
   return hasCommand('pnpm') ? 'pnpm' : 'npm';
 }
 
+// 端口占用检测：返回占用端口的 [{ port, pid, cmd }] 列表；无占用返回 []
+function detectPortOccupants(ports) {
+  if (IS_WIN) return []; // 仅在 *nix 上做检测
+  const result = [];
+  for (const port of ports) {
+    const r = spawnSync('lsof', ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN'], {
+      encoding: 'utf8',
+    });
+    if (r.status !== 0) continue;
+    const lines = (r.stdout || '').split('\n').slice(1).filter(Boolean);
+    for (const line of lines) {
+      const cols = line.split(/\s+/);
+      if (cols.length >= 2) {
+        result.push({ port, pid: cols[1], cmd: cols[0] });
+      }
+    }
+  }
+  return result;
+}
+
 // ---- 主流程 ----
 (async () => {
   try {
     sysLog(`工作目录: ${ROOT}`);
 
+    // 0) 端口占用 preflight
+    const busy = detectPortOccupants([8080, 3001, 5173]);
+    if (busy.length > 0) {
+      sysLog(`${COLORS.err}端口已被占用：${COLORS.reset}`);
+      for (const b of busy) {
+        sysLog(`  :${b.port}  PID=${b.pid}  CMD=${b.cmd}`);
+      }
+      sysLog(`请先释放端口：例如 ${COLORS.sys}kill ${busy.map((b) => b.pid).join(' ')}${COLORS.reset}`);
+      process.exit(1);
+    }
+
     // 1) 依赖准备（串行，避免重复装包）
     await ensureNodeDeps();
     await ensureFrontendDeps();
-
     // 2) 启动 Go 后端
     // 使用 `go run .`，跨平台、无需先 build。要求 go 已安装。
     if (!hasCommand('go', ['version'])) {

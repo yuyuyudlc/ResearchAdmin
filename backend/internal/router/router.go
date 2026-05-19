@@ -11,7 +11,13 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-func New(authHandler *handler.AuthHandler, documentHandler *handler.DocumentHandler, tokenManager *auth.TokenManager) *gin.Engine {
+func New(
+	authHandler *handler.AuthHandler,
+	documentHandler *handler.DocumentHandler,
+	adminUserHandler *handler.AdminUserHandler,
+	adminOrgHandler *handler.AdminOrganizationHandler,
+	tokenManager *auth.TokenManager,
+) *gin.Engine {
 	r := gin.Default()
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -53,6 +59,27 @@ func New(authHandler *handler.AuthHandler, documentHandler *handler.DocumentHand
 	api.GET("/documents/:documentId/my-permission", documentHandler.MyPermission)
 	api.GET("/documents/:documentId/body", documentHandler.GetBody)
 	api.PUT("/documents/:documentId/body", documentHandler.PutBody)
+
+	// 管理员后台：需 JWT + AdminOnly
+	adminGroup := api.Group("/admin")
+	adminGroup.Use(middleware.AdminOnly())
+
+	// 机构
+	adminGroup.GET("/organizations", adminOrgHandler.ListOrganizations)
+	adminGroup.POST("/organizations", adminOrgHandler.CreateOrganization)
+	adminGroup.PATCH("/organizations/:orgId", adminOrgHandler.UpdateOrganization)
+	adminGroup.DELETE("/organizations/:orgId", adminOrgHandler.DeleteOrganization)
+	adminGroup.POST("/organizations/:orgId/move-users", adminOrgHandler.MoveAllUsers)
+
+	// 用户
+	adminGroup.GET("/users", adminUserHandler.ListUsers)
+	adminGroup.POST("/users", adminUserHandler.CreateUser)
+	adminGroup.GET("/users/:userId", adminUserHandler.GetUser)
+	adminGroup.PATCH("/users/:userId", adminUserHandler.UpdateUser)
+	adminGroup.DELETE("/users/:userId", adminUserHandler.DeleteUser)
+	adminGroup.POST("/users/:userId/move", adminUserHandler.MoveUser)
+	adminGroup.POST("/users/:userId/reset-password", adminUserHandler.ResetPassword)
+	adminGroup.POST("/users/:userId/status", adminUserHandler.SetStatus)
 
 	return r
 }

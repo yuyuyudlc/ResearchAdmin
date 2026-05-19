@@ -61,6 +61,7 @@ type UserResponse struct {
 	ID                string                   `json:"id"`
 	Username          string                   `json:"username"`
 	Email             string                   `json:"email"`
+	OrganizationID    *string                  `json:"organizationId"`
 	Organization      string                   `json:"organization"`
 	AvatarURL         string                   `json:"avatarUrl"`
 	Signature         string                   `json:"signature"`
@@ -174,6 +175,10 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*Login
 		return nil, err
 	}
 
+	if user.Status == domain.UserStatusDisabled {
+		return nil, errors.New("账号已被禁用，请联系管理员")
+	}
+
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 	if err != nil {
 		return nil, errors.New("密码错误")
@@ -227,6 +232,7 @@ func toUserResponse(user *domain.User) UserResponse {
 		ID:                user.ID,
 		Username:          user.Username,
 		Email:             user.Email,
+		OrganizationID:    user.OrganizationID,
 		Organization:      user.Organization,
 		AvatarURL:         user.AvatarURL,
 		Signature:         user.Signature,

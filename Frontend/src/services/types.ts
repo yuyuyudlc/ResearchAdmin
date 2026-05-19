@@ -8,12 +8,14 @@ export interface User {
   id: string
   username: string
   email: string
+  organizationId?: string | null
   organization: string
   avatarUrl: string
   signature: string
   professionalTitle: string
   supervisor: string
   displayName: string
+  status?: string
 }
 
 export interface LoginRequest {
@@ -208,6 +210,79 @@ export interface PutBodyRequest {
 
 export interface UserListResponse {
   items: User[]
+}
+
+export interface Organization {
+  id: string
+  name: string
+  description: string
+  sortOrder: number
+  userCount?: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface OrganizationListResponse {
+  items: Organization[]
+}
+
+export interface CreateOrganizationRequest {
+  name: string
+  description?: string
+}
+
+export interface UpdateOrganizationRequest {
+  name?: string
+  description?: string
+  sortOrder?: number
+}
+
+export interface MoveOrganizationUsersRequest {
+  targetOrgId: string
+}
+
+export interface AdminUserListResponse {
+  items: User[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+export interface AdminCreateUserRequest {
+  username: string
+  email: string
+  organizationId?: string | null
+  professionalTitle?: string
+  supervisor?: string
+}
+
+export interface AdminUpdateUserRequest {
+  username?: string
+  email?: string
+  professionalTitle?: string
+  supervisor?: string
+  signature?: string
+  avatarUrl?: string
+}
+
+export interface AdminCreateUserResponse {
+  user: User
+  initialPassword: string
+}
+
+export interface AdminMoveUserRequest {
+  organizationId?: string | null
+}
+
+export interface AdminResetPasswordResponse {
+  initialPassword: string
+}
+
+export interface AdminListUsersQuery {
+  organizationId?: string | null | 'unassigned'
+  q?: string
+  page?: number
+  pageSize?: number
 }
 
 export interface SearchRequest {

@@ -7,6 +7,7 @@ const HomePage = lazy(() => import('../pages/Home'))
 const WorkspaceListPage = lazy(() => import('../pages/WorkspaceList'))
 const WorkspaceDetailPage = lazy(() => import('../pages/WorkspaceDetail'))
 const DocumentEditorPage = lazy(() => import('../pages/DocumentEditor'))
+const AdminUsersPage = lazy(() => import('../pages/AdminUsers'))
 
 export const routesConfig: RouteObject[] = [
   {
@@ -32,6 +33,10 @@ export const routesConfig: RouteObject[] = [
       {
         path: 'documents/:documentId',
         element: <DocumentEditorPage />,
+      },
+      {
+        path: 'admin/users',
+        element: <AdminUsersPage />,
       },
     ],
   },

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { App, Button, Spin, Tooltip, Typography } from 'antd'
+import { useAuth } from '../../contexts/AuthContext'
 import { usePrivateSpace } from '../../contexts/PrivateSpaceContext'
 import { workspaceService } from '../../services/workspace'
 import type { Workspace } from '../../services/types'
@@ -15,6 +16,9 @@ export default function Sidebar() {
   const location = useLocation()
   const { workspaceId: routeWsId } = useParams<{ workspaceId: string }>()
   const { message } = App.useApp()
+  const { user } = useAuth()
+  const isAdmin = user?.username === 'admin'
+  const isAdminRouteActive = location.pathname.startsWith('/admin')
 
   const {
     workspace: privateWs,
@@ -119,6 +123,19 @@ export default function Sidebar() {
         </span>
         <span>首页</span>
       </div>
+
+      {/* 管理人员：仅 admin 可见 */}
+      {isAdmin && (
+        <div
+          className={[styles.entry, isAdminRouteActive ? styles.entryActive : ''].join(' ')}
+          onClick={() => navigate('/admin/users')}
+        >
+          <span className={styles.entryIcon}>
+            <Icon name="settings" size={16} />
+          </span>
+          <span>管理人员</span>
+        </div>
+      )}
 
       {/* 私人空间 */}
       <div className={styles.section}>
