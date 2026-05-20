@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Collaboration from '@tiptap/extension-collaboration'
 import StarterKit from '@tiptap/starter-kit'
@@ -29,7 +29,49 @@ export function useDocumentEditor() {
   const { documentId } = useParams<{ documentId: string }>()
   const navigate = useNavigate()
   const { token, user } = useAuth()
-  const ydoc = useMemo(() => new Y.Doc(), [documentId])
+
+  // Use a ref to store instances to handle StrictMode double-invocations without leaking connections
+  const instancesRef = useRef<{
+    ydoc: Y.Doc
+    provider: WebsocketProvider
+    indexeddb: IndexeddbPersistence
+    id: string
+  } | null>(null)
+
+  // Initialize instances synchronously exactly once per documentId
+  if (!instancesRef.current || instancesRef.current.id !== documentId) {
+    if (instancesRef.current) {
+      // Clean up old document instances if documentId changed
+      instancesRef.current.provider.disconnect()
+      instancesRef.current.provider.destroy()
+      instancesRef.current.indexeddb.destroy()
+      instancesRef.current.ydoc.destroy()
+    }
+
+    if (documentId && token) {
+      const ydoc = new Y.Doc()
+      const indexeddb = new IndexeddbPersistence(`doc-offline-${documentId}`, ydoc)
+      indexeddb.on('synced', () => {
+        console.log(`[indexeddb] document offline cache loaded for ${documentId}`)
+      })
+
+      const wsPort = 3001
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+      const wsHost = window.location.hostname
+      const wsUrl = `${wsProtocol}//${wsHost}:${wsPort}`
+
+      const provider = new WebsocketProvider(wsUrl, `documents/${documentId}`, ydoc, {
+        params: { token },
+        connect: false, // will connect in useEffect
+      })
+
+      instancesRef.current = { ydoc, provider, indexeddb, id: documentId }
+    } else {
+      instancesRef.current = null
+    }
+  }
+
+  const instances = instancesRef.current
 
   const [document, setDocument] = useState<DocumentNode | null>(null)
   const [loading, setLoading] = useState(true)
@@ -42,70 +84,60 @@ export function useDocumentEditor() {
   const [collaborators, setCollaborators] = useState<any[]>([])
   const [syncStatus, setSyncStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting')
 
-  // Offline persistence provider (IndexedDB)
-  const indexeddbProvider = useMemo(() => {
-    if (!documentId) return null
-    return new IndexeddbPersistence(`doc-offline-${documentId}`, ydoc)
-  }, [documentId, ydoc])
-
-  // WebSocket provider (Real-time collaboration sync)
-  const provider = useMemo(() => {
-    if (!documentId || !token) return null
-    const wsPort = 3001
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsHost = window.location.hostname
-    const wsUrl = `${wsProtocol}//${wsHost}:${wsPort}`
-
-    return new WebsocketProvider(wsUrl, `documents/${documentId}`, ydoc, {
-      params: { token },
-      connect: false,
-    })
-  }, [documentId, token, ydoc])
-
-  // Manage providers connection life cycle
+  // Connect WebSocket on mount and handle disconnect on unmount
   useEffect(() => {
-    if (!provider) return
-    provider.connect()
-    return () => {
-      provider.disconnect()
-      provider.destroy()
-    }
-  }, [provider])
+    if (!instances) return
 
-  useEffect(() => {
-    if (!indexeddbProvider) return
-    indexeddbProvider.on('synced', () => {
-      console.log(`[indexeddb] document offline cache loaded for ${documentId}`)
-    })
+    instances.provider.connect()
+
     return () => {
-      indexeddbProvider.destroy()
+      // On unmount, just disconnect. If it's a StrictMode remount, it will reconnect.
+      // If it's a real unmount, the next render or unmount effect will destroy it.
+      if (instances.provider.wsconnected || instances.provider.wsconnecting) {
+        instances.provider.disconnect()
+      }
     }
-  }, [indexeddbProvider, documentId])
+  }, [instances])
+
+  // Final cleanup when component unmounts for good
+  useEffect(() => {
+    return () => {
+      if (instancesRef.current) {
+        instancesRef.current.provider.disconnect()
+        instancesRef.current.provider.destroy()
+        instancesRef.current.indexeddb.destroy()
+        instancesRef.current.ydoc.destroy()
+        instancesRef.current = null
+      }
+    }
+  }, [])
 
   // Track websocket connection status
   useEffect(() => {
-    if (!provider) return
+    if (!instances) return
+    const { provider } = instances
 
     const handleStatus = (event: any) => {
       setSyncStatus(event.status)
     }
 
     provider.on('status', handleStatus)
-    setSyncStatus(provider.shouldConnect ? 'connecting' : 'disconnected')
+    setSyncStatus(provider.wsconnected ? 'connected' : provider.shouldConnect ? 'connecting' : 'disconnected')
 
     return () => {
       provider.off('status', handleStatus)
     }
-  }, [provider])
+  }, [instances])
 
   // Track online collaborators and cursor presence
   useEffect(() => {
-    if (!provider) return
+    if (!instances || !user) return
+    const { provider } = instances
 
     provider.awareness.setLocalStateField('user', {
-      name: user?.displayName || user?.username || '未命名用户',
-      email: user?.email || '',
-      color: getUniqueColor(user?.id || ''),
+      name: user.displayName || user.username || '未命名用户',
+      email: user.email || '',
+      color: getUniqueColor(user.id || ''),
     })
 
     const handleAwarenessChange = () => {
@@ -129,19 +161,20 @@ export function useDocumentEditor() {
     return () => {
       provider.awareness.off('change', handleAwarenessChange)
     }
-  }, [provider, user])
+  }, [instances, user])
 
+  // Initialize editor exactly once with the stable instances
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         undoRedo: false,
       }),
-      Collaboration.configure({
-        document: ydoc,
-      }),
-      ...(provider ? [
+      ...(instances ? [
+        Collaboration.configure({
+          document: instances.ydoc,
+        }),
         CollaborationCaret.configure({
-          provider: provider,
+          provider: instances.provider,
           user: {
             name: user?.displayName || user?.username || '未命名用户',
             color: getUniqueColor(user?.id || ''),
@@ -154,10 +187,11 @@ export function useDocumentEditor() {
         class: 'tiptap-editor-content',
       },
     },
-  }, [ydoc, provider, user])
+  }, [instances, user])
 
   const fetchDocument = useCallback(async () => {
     if (!documentId) return
+    
     setLoading(true)
     setError('')
     try {
@@ -167,8 +201,12 @@ export function useDocumentEditor() {
       ])
       setDocument(docRes.data)
 
-      if (docRes.data.docType === 'rich_text' && bodyRes && bodyRes.byteLength > 0) {
-        Y.applyUpdate(ydoc, new Uint8Array(bodyRes))
+      // We ONLY apply the HTTP update if we aren't connected to the WebSocket.
+      // If we are connected, the WebSocket handles syncing. 
+      // This prevents race conditions where old HTTP data overwrites fresh WS data.
+      if (instances && docRes.data.docType === 'rich_text' && bodyRes && bodyRes.byteLength > 0) {
+        // Wrap in a transact so we don't spam origin events if not needed
+        Y.applyUpdate(instances.ydoc, new Uint8Array(bodyRes), 'http-fetch')
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : '加载文档失败')
@@ -176,23 +214,17 @@ export function useDocumentEditor() {
     } finally {
       setLoading(false)
     }
-  }, [documentId, ydoc])
+  }, [documentId, instances])
 
   useEffect(() => {
     fetchDocument()
   }, [fetchDocument])
 
-  useEffect(() => {
-    return () => {
-      ydoc.destroy()
-    }
-  }, [ydoc])
-
   const saveBody = async () => {
-    if (!documentId || !editor) return
+    if (!documentId || !editor || !instances) return
     setSaving(true)
     try {
-      const update = Y.encodeStateAsUpdate(ydoc)
+      const update = Y.encodeStateAsUpdate(instances.ydoc)
       await documentService.putBody(documentId, update)
       setLastSaved(new Date())
       setError('')
