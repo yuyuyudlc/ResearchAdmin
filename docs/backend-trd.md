@@ -608,20 +608,24 @@
 - **响应正文**：
   - 文档序列化后的全量 Yjs 二进制状态快照，如果全新空文档，返回数据流长度为 `0`。
 
-#### 4.6.2 回写文档正文二进制 (HTTP PUT，供协同服务合并完批量刷盘)
+#### 4.6.2 回写/替换文档正文二进制 (HTTP PUT，支持 Yjs 刷盘与常规附件覆盖上传)
 - **方法与路径**：`PUT /api/v1/documents/:documentId/body`
+- **权限要求**：文档 `EDIT` 权限。
 - **请求头 (Headers)**：
   - `Content-Type: application/octet-stream`
-  - `X-Body-Type`（可选，默认 `yjs_state`）：正文编码，如 `yjs_state` 等。
+  - `X-Body-Type`（必填/可选）：标识内容正文的物理格式：
+    - 富文本文档：固定为 `yjs_state`（不传默认为 `yjs_state`）。
+    - 文件附件型文档：可选 `pdf`、`word`、`video` 等（禁止传入 `yjs_state`，否则报错）。
 - **请求正文**：
-  - 由 Node 服务生成的全量 `Y.encodeStateAsUpdate(ydoc)` 二进制流负载。
+  - 富文本文档：Node 协同服务生成的全量 `Y.encodeStateAsUpdate(ydoc)` 二进制字节流。
+  - 文件型文档：需要覆盖保存的本地文件（如 Excel、Docx、PDF）的原始二进制字节流 (Raw Binary Data)。
 - **响应体 (Data)**：
   ```json
   {
     "code": 0,
     "message": "success",
     "data": {
-      "size": 40960
+      "size": 40960 // 返回保存后的文件字节大小 (bytes)
     }
   }
   ```

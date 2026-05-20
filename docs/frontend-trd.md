@@ -130,3 +130,93 @@ const editor = useEditor({
   - **搜索回调**：通过 `onSearch={handleUserSearch}`，触发模糊搜索，获取匹配的用户列表并更新 `searchedUsers` 状态。
   - **选项展示**：将检索到的用户数据转化为 `{ value: u.id, label: `${u.displayName} (${u.email})` }` 的格式，以供用户直观选择。
   - **编辑回显处理**：在编辑模式下，若当前授权的 `subjectId` 不在搜索列表中，程序会自动补接一个 `用户 ID: ${editing.subjectId}` 的 Fallback 选项，避免渲染为空，极大提升了用户体验与健壮性。
+
+### 5.3 附件型文档 (File Attachments) 的更新与覆盖保存指引（前端开发特供）
+为了让前端开发人员能以最简洁、低门槛的方式接入附件修改并保存功能，以下提供了标准的业务步骤、核心接口及参考代码。
+
+#### 5.3.1 核心对接流程
+对于常规附件（如 Excel、Word、PDF），因为无法直接在网页中打字，编辑与更新需要遵循“下载原件 -> 本地用专业软件编辑 -> 重新上传并保存覆盖”的流程：
+
+```mermaid
+sequenceDiagram
+    participant FE as 前端界面 (Client)
+    participant BE as 后端服务 (Go Server)
+    
+    Note over FE: 用户点击 "修改/更新附件" 按钮
+    FE->>FE: 弹出本地文件选择器 (限制格式)
+    Note over FE: 选择最新的本地编辑文件
+    FE->>BE: 1. PUT /api/v1/documents/:documentId/body (直接传输文件 ArrayBuffer)
+    BE-->>FE: 返回 { code: 0, message: "success", data: { size: 1024 } }
+    
+    FE->>BE: 2. PATCH /api/v1/documents/:documentId (更新文件名与元数据)
+    Note over FE: { title: "新文件名", sourceStorageKey: "新文件名" }
+    BE-->>FE: 返回更新后的元数据成功
+    Note over FE: 界面提示 "附件已更新成功" 并刷新下载卡片
+```
+
+#### 5.3.2 前端对接代码实例
+
+##### 1. 前端 API 封装 (`src/services/document.ts`)
+我们已经在 `documentService` 中为您封装好了上传二进制的方法 `putBody`，如果您是更新文件，只需要这样调用：
+```typescript
+import { documentService } from './document'
+
+// 1. 保存/替换文件二进制正文
+// data 可以是 input type="file" 拿到的 File 对象转成 ArrayBuffer 或 Uint8Array
+// ext 对应文件扩展名，例如: 'word', 'pdf' 等 (不可传 'yjs_state')
+async function uploadNewFileContent(documentId: string, fileData: ArrayBuffer, ext: string) {
+  return documentService.putBody(documentId, new Uint8Array(fileData), {
+    'X-Body-Type': ext 
+  })
+}
+
+// 2. 同步更新文档的文件名元数据 (可选，若文件名发生变更)
+async function updateFileMeta(documentId: string, newFilename: string) {
+  return documentService.update(documentId, {
+    title: newFilename,
+    sourceStorageKey: newFilename
+  })
+}
+```
+
+##### 2. 界面层接入建议 (`src/pages/DocumentEditor/index.tsx`)
+您可以在 `DocumentEditorPage` 附件结果页面 (`styles.fileShell`) 的 `extra` 动作区域，并列增设一个 `<Upload>` 按钮：
+```tsx
+import { Upload, Button, message } from 'antd'
+
+// 在页面组件内声明更新逻辑
+const handleUploadNewVersion = async (file: File) => {
+  try {
+    message.loading({ content: '正在上传新版本...', key: 'uploading', duration: 0 })
+    
+    // 读取文件为 ArrayBuffer
+    const arrayBuffer = await file.arrayBuffer()
+    
+    // 获取后缀名 (去掉 .)
+    const ext = file.name.split('.').pop() || ''
+    
+    // 步骤 A: 上传并替换后端二进制正文
+    await documentService.putBody(document.id, new Uint8Array(arrayBuffer), { 'X-Body-Type': ext }) 
+    
+    // 步骤 B: 修正文件名元数据
+    await documentService.update(document.id, {
+      title: file.name,
+      sourceStorageKey: file.name
+    })
+    
+    message.success({ content: '附件新版本已成功覆盖并保存！', key: 'uploading' })
+    
+    // 刷新页面状态以获取最新文件详情
+    fetchDocument() 
+  } catch (err) {
+    message.error({ content: '覆盖保存失败，请重试', key: 'uploading' })
+  }
+}
+
+// 界面呈现
+<Upload beforeUpload={(file) => { handleUploadNewVersion(file); return false; }} showUploadList={false}>
+  <Button size="large">上传本地最新版覆盖</Button>
+</Upload>
+```
+
+只要按此结构拼装请求，就可以极其安全、完美地通过 `PUT` 和 `PATCH` 接口完成附件更新与替换保存工作。傻瓜式调用，请勿漏写 `X-Body-Type` 标头以防止后端类型校验报错。

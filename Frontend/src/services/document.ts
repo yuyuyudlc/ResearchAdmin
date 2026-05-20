@@ -47,9 +47,10 @@ export const documentService = {
     return getBinary(`/documents/${documentId}/body`)
   },
 
-  putBody(documentId: string, data: Uint8Array) {
+  putBody(documentId: string, data: Uint8Array, headers?: Record<string, string>) {
     return putBinary<{ size: number }>(`/documents/${documentId}/body`, data, {
       'X-Body-Type': 'yjs_state',
+      ...headers,
     })
   },
 }
