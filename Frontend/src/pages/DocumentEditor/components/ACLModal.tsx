@@ -73,7 +73,7 @@ export default function ACLModal({ open, documentId, onClose }: Props) {
     setSearchingUsers(true)
     try {
       const res = await userService.search(trimmed)
-      setSearchedUsers(res.data)
+      setSearchedUsers(Array.isArray(res?.data) ? res.data : [])
     } catch (err) {
       console.error('Failed to search users:', err)
     } finally {
@@ -170,15 +170,18 @@ export default function ACLModal({ open, documentId, onClose }: Props) {
                 const subjectType = form.getFieldValue('subjectType')
                 if (subjectType === 'public') return null
                 if (subjectType === 'user') {
-                  const options = searchedUsers.map((u) => ({
-                    value: u.id,
-                    label: `${u.displayName} (${u.email})`,
-                  }))
+                  const userList = Array.isArray(searchedUsers) ? searchedUsers : []
+                  const options = userList
+                    .filter((u): u is User => !!u)
+                    .map((u) => ({
+                      value: u.id,
+                      label: `${u.displayName || ''} (${u.email || ''})`,
+                    }))
                   if (
                     editing &&
                     editing.subjectType === 'user' &&
                     editing.subjectId &&
-                    !searchedUsers.some((u) => u.id === editing.subjectId)
+                    !userList.some((u) => u?.id === editing.subjectId)
                   ) {
                     options.push({
                       value: editing.subjectId,

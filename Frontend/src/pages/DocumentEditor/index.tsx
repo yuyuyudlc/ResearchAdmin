@@ -83,7 +83,7 @@ export default function DocumentEditorPage() {
   if (loading) {
     return (
       <div className={styles.center}>
-        <Spin tip="加载文档中..." />
+        <Spin description="加载文档中..." />
       </div>
     )
   }
@@ -109,7 +109,7 @@ export default function DocumentEditorPage() {
   if (!editor && document?.docType === 'rich_text') {
     return (
       <div className={styles.center}>
-        <Spin tip="初始化编辑器..." />
+        <Spin description="初始化编辑器..." />
       </div>
     )
   }
