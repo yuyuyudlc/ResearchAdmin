@@ -12,6 +12,7 @@
   "dependencies": {
     "@iconify/react": "^6.0.2",
     "@tiptap/extension-collaboration": "^3.22.4",
+    "@tiptap/extension-collaboration-cursor": "^2.26.2",
     "@tiptap/extension-drag-handle-react": "^3.22.4",
     "@tiptap/react": "^3.22.4",
     "@tiptap/starter-kit": "^3.22.4",
@@ -19,6 +20,8 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.14.1",
+    "y-indexeddb": "^9.0.12",
+    "y-websocket": "^3.0.0",
     "yjs": "^13.6.30"
   },
   "devDependencies": {

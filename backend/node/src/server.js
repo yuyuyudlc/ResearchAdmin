@@ -50,7 +50,16 @@ function flushIfPending(docId) {
 // ---- Persistence hook ----
 // y-websocket calls writeState on every update. We debounce the actual flush.
 setPersistence({
-  bindState: async () => { /* no-op: YDoc managed by y-websocket */ },
+  bindState: async (docId, ydoc) => {
+    console.log(`[persistence] Loading initial state for doc ${docId}...`);
+    const dbUpdate = await goClient.getBody(docId);
+    if (dbUpdate && dbUpdate.byteLength > 0) {
+      Y.applyUpdate(ydoc, dbUpdate);
+      console.log(`[persistence] Loaded initial state for doc ${docId} (${dbUpdate.byteLength} bytes)`);
+    } else {
+      console.log(`[persistence] No existing state found for doc ${docId}, starting fresh`);
+    }
+  },
   writeState: async (docId, ydoc) => {
     scheduleFlush(docId, ydoc);
   },
@@ -68,10 +77,43 @@ const server = createServer((req, res) => {
 });
 
 // ---- WebSocket ----
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ noServer: true });
+
+server.on('upgrade', async (req, socket, head) => {
+  const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
+  const match = url.pathname.match(/^\/documents\/([a-f0-9-]{36})$/);
+  if (!match) {
+    socket.write('HTTP/1.1 400 Bad Request\r\n\r\n');
+    socket.destroy();
+    return;
+  }
+  const docId = match[1];
+
+  const token = url.searchParams.get('token');
+  if (!token) {
+    console.log(`[ws-upgrade] ${docId} connection rejected: missing token`);
+    socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+    socket.destroy();
+    return;
+  }
+
+  // Validate permission with Go backend
+  const perms = await goClient.checkPermission(docId, token);
+  if (!perms.canRead) {
+    console.log(`[ws-upgrade] ${docId} connection rejected: insufficient permissions`);
+    socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+    socket.destroy();
+    return;
+  }
+
+  wss.handleUpgrade(req, socket, head, (ws) => {
+    ws.perms = perms;
+    wss.emit('connection', ws, req);
+  });
+});
 
 wss.on('connection', (ws, req) => {
-  const url = new URL(req.url || '/', `http://${req.headers.host}`);
+  const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
   const match = url.pathname.match(/^\/documents\/([a-f0-9-]{36})$/);
   if (!match) {
     ws.close(4000, 'invalid path, expected /documents/{docId}');
@@ -82,9 +124,13 @@ wss.on('connection', (ws, req) => {
   // 连接关闭前确保待 flush 的更新已写入 Go
   ws.on('close', () => flushIfPending(docId));
 
+  if (ws.readyState !== ws.OPEN) {
+    return;
+  }
+
   // docName 是 y-websocket 内部 YDoc Map 的 key，传文档 UUID，不是文档标题
   setupWSConnection(ws, req, { docName: docId, gc: true });
-  console.log(`[ws] ${docId} connected`);
+  console.log(`[ws] ${docId} connected (canEdit: ${ws.perms?.canEdit || false})`);
 });
 
 // ---- Start ----

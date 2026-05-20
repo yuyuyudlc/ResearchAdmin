@@ -76,3 +76,42 @@
     margin-top: 24px;
   }
 }
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.4);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(0, 0, 0, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+  }
+}
+
+.pulsingDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.connectedDot {
+  background-color: #52c41a;
+  box-shadow: 0 0 8px #52c41a;
+}
+
+.connectingDot {
+  background-color: #faad14;
+  box-shadow: 0 0 8px #faad14;
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+.disconnectedDot {
+  background-color: #ff4d4f;
+  box-shadow: 0 0 8px #ff4d4f;
+  animation: pulse 1.5s infinite ease-in-out;
+}

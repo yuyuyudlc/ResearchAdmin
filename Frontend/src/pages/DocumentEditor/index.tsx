@@ -13,6 +13,8 @@ import {
   Spin,
   Tag,
   Typography,
+  Avatar,
+  Tooltip,
 } from 'antd'
 
 import {
@@ -56,6 +58,8 @@ export default function DocumentEditorPage() {
     moveDocument,
     downloadDocument,
     handleBack,
+    collaborators,
+    syncStatus,
   } = useDocumentEditor()
 
   useEffect(() => {
@@ -202,27 +206,59 @@ export default function DocumentEditorPage() {
           <Title level={3} className={styles.docTitle}>
             {document?.title || '未命名文档'}
           </Title>
-          <Space size={8} wrap>
+          <Space size={8} wrap align="center">
             <Tag>{document?.docType === 'rich_text' ? '富文本' : document?.docType || '文档'}</Tag>
             {isArchived && <Tag color="orange">已归档</Tag>}
-            {lastSaved && (
+            
+            {document?.docType === 'rich_text' && (
+              <Space size={6} style={{ marginLeft: 8 }}>
+                <span className={`${styles.pulsingDot} ${
+                  syncStatus === 'connected' 
+                    ? styles.connectedDot 
+                    : syncStatus === 'connecting' 
+                    ? styles.connectingDot 
+                    : styles.disconnectedDot
+                }`} />
+                <Text type={syncStatus === 'connected' ? 'success' : syncStatus === 'connecting' ? 'warning' : 'danger'} style={{ fontSize: 13 }}>
+                  {syncStatus === 'connected'
+                    ? '云端实时同步中'
+                    : syncStatus === 'connecting'
+                    ? '正在连接云端协同...'
+                    : '已离线 (已启用本地离线缓存)'}
+                </Text>
+              </Space>
+            )}
+
+            {lastSaved && !isArchived && document?.docType !== 'rich_text' && (
               <Text type="secondary">上次保存: {lastSaved.toLocaleTimeString()}</Text>
             )}
           </Space>
         </div>
 
-        <Space wrap>
-          {document?.docType === 'rich_text' && (
-            <Button
-              type="primary"
-              loading={saving}
-              onClick={() =>
-                saveBody().then(() => message.success('文档已保存'))
-              }
-            >
-              保存
-            </Button>
+        <Space wrap align="center" size={16}>
+          {/* Active Collaborators Avatars */}
+          {document?.docType === 'rich_text' && collaborators.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 8 }}>
+              <span style={{ fontSize: 13, color: '#8c8c8c' }}>当前在线:</span>
+              <Avatar.Group max={{ count: 4, style: { color: '#f56a00', backgroundColor: '#fde3cf' } }}>
+                {collaborators.map((c) => (
+                  <Tooltip key={c.clientID} title={`${c.name} (${c.email || '无邮箱'})${c.isSelf ? ' (你)' : ''}`}>
+                    <Avatar 
+                      size="small"
+                      style={{ 
+                        backgroundColor: c.color, 
+                        borderColor: c.isSelf ? '#1677ff' : '#d9d9d9',
+                        cursor: 'pointer' 
+                      }}
+                    >
+                      {c.name.charAt(0).toUpperCase()}
+                    </Avatar>
+                  </Tooltip>
+                ))}
+              </Avatar.Group>
+            </div>
           )}
+
           <Button onClick={() => setMetaOpen(true)}>文档信息</Button>
           <Button onClick={() => setMoveOpen(true)}>移动</Button>
           <Button onClick={() => setAclOpen(true)}>权限</Button>

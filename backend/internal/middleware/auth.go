@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"os"
 	"strings"
 
 	"research/internal/auth"
@@ -29,6 +30,17 @@ func JWTAuth(tokenManager *auth.TokenManager) gin.HandlerFunc {
 		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
 			response.Error(c, http.StatusUnauthorized, "Authorization 格式错误")
 			c.Abort()
+			return
+		}
+
+		internalToken := os.Getenv("GO_INTERNAL_TOKEN")
+		if internalToken == "" {
+			internalToken = "internal-secret"
+		}
+		if parts[1] == internalToken {
+			c.Set(currentUserIDKey, "system")
+			c.Set(currentUsernameKey, "system")
+			c.Next()
 			return
 		}
 

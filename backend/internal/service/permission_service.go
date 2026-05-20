@@ -26,6 +26,9 @@ func (s *DocumentService) MyPermission(ctx context.Context, userID, documentID s
 }
 
 func (s *DocumentService) ComputePermission(ctx context.Context, userID string, doc *domain.Document) (int, error) {
+	if userID == "system" {
+		return fullPermission, nil
+	}
 	if doc.OwnerUserID == userID {
 		return fullPermission, nil
 	}
