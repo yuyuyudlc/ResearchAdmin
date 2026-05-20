@@ -6,7 +6,7 @@ import { useEditor } from '@tiptap/react'
 import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
 import { IndexeddbPersistence } from 'y-indexeddb'
-import CollaborationCursor from '@tiptap/extension-collaboration-cursor'
+import CollaborationCaret from '@tiptap/extension-collaboration-caret'
 import type { DocumentNode } from '../../../services/types'
 import { documentService } from '../../../services/document'
 import { useAuth } from '../../../contexts/AuthContext'
@@ -140,7 +140,7 @@ export function useDocumentEditor() {
         document: ydoc,
       }),
       ...(provider ? [
-        CollaborationCursor.configure({
+        CollaborationCaret.configure({
           provider: provider,
           user: {
             name: user?.displayName || user?.username || '未命名用户',
