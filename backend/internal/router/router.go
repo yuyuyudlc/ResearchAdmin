@@ -33,6 +33,7 @@ func New(
 
 	api := r.Group("/api/v1")
 	api.Use(middleware.JWTAuth(tokenManager))
+	api.GET("/users/search", authHandler.SearchUsers)
 	api.POST("/workspaces", documentHandler.CreateWorkspace)
 	api.GET("/workspaces", documentHandler.ListWorkspaces)
 	api.GET("/workspaces/:workspaceId", documentHandler.GetWorkspaceDirectory)

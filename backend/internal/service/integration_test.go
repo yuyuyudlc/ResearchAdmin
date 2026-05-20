@@ -716,3 +716,104 @@ func TestFullUserJourney(t *testing.T) {
 
 	t.Log("全部流程通过 √")
 }
+
+func TestSearchUsers(t *testing.T) {
+	ctx := context.Background()
+	authSvc, _, db := newTestAuthService(t)
+
+	// Create test users
+	user1 := domain.User{
+		Username:     "alpha_user",
+		Email:        "alpha@example.com",
+		DisplayName:  "Alpha Test",
+		Status:       "active",
+		PasswordHash: "hash",
+	}
+	user2 := domain.User{
+		Username:     "beta_user",
+		Email:        "beta@example.com",
+		DisplayName:  "Beta Test",
+		Status:       "active",
+		PasswordHash: "hash",
+	}
+	user3 := domain.User{
+		Username:     "disabled_user",
+		Email:        "disabled@example.com",
+		DisplayName:  "Disabled Test",
+		Status:       "disabled",
+		PasswordHash: "hash",
+	}
+
+	if err := db.Create(&user1).Error; err != nil {
+		t.Fatalf("Create user1 error: %v", err)
+	}
+	if err := db.Create(&user2).Error; err != nil {
+		t.Fatalf("Create user2 error: %v", err)
+	}
+	if err := db.Create(&user3).Error; err != nil {
+		t.Fatalf("Create user3 error: %v", err)
+	}
+
+	// 1. Search matching username case-insensitively
+	res, err := authSvc.SearchUsers(ctx, SearchUsersRequest{Q: "AlPhA"})
+	if err != nil {
+		t.Fatalf("SearchUsers error: %v", err)
+	}
+	if len(res) != 1 {
+		t.Fatalf("Expected 1 result, got %d", len(res))
+	}
+	if res[0].Username != "alpha_user" {
+		t.Fatalf("Expected alpha_user, got %s", res[0].Username)
+	}
+	if res[0].Email != "alpha@example.com" {
+		t.Fatalf("Expected alpha@example.com, got %s", res[0].Email)
+	}
+
+	// 2. Search matching email
+	res, err = authSvc.SearchUsers(ctx, SearchUsersRequest{Q: "beta@"})
+	if err != nil {
+		t.Fatalf("SearchUsers error: %v", err)
+	}
+	if len(res) != 1 {
+		t.Fatalf("Expected 1 result, got %d", len(res))
+	}
+	if res[0].Username != "beta_user" {
+		t.Fatalf("Expected beta_user, got %s", res[0].Username)
+	}
+
+	// 3. Search matching multiple (using common keyword like "example.com")
+	res, err = authSvc.SearchUsers(ctx, SearchUsersRequest{Q: "example.com"})
+	if err != nil {
+		t.Fatalf("SearchUsers error: %v", err)
+	}
+	foundUser1 := false
+	foundUser2 := false
+	foundUser3 := false
+	for _, u := range res {
+		if u.ID == user1.ID {
+			foundUser1 = true
+		}
+		if u.ID == user2.ID {
+			foundUser2 = true
+		}
+		if u.ID == user3.ID {
+			foundUser3 = true
+		}
+	}
+	if !foundUser1 || !foundUser2 {
+		t.Fatal("Expected user1 and user2 to be found in general query")
+	}
+	if foundUser3 {
+		t.Fatal("Disabled user should not be returned by search")
+	}
+
+	// 4. Search empty query
+	res, err = authSvc.SearchUsers(ctx, SearchUsersRequest{Q: "  "})
+	if err != nil {
+		t.Fatalf("SearchUsers error: %v", err)
+	}
+	if len(res) != 0 {
+		t.Fatalf("Expected empty results for empty query, got %d", len(res))
+	}
+}
+

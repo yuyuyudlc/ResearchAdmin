@@ -201,6 +201,35 @@ func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 	response.Success(c, gin.H{"message": "个人信息修改成功"})
 }
 
+// SearchUsers 模糊搜索用户
+// @Summary 模糊搜索用户
+// @Description 根据用户名、邮箱或显示名称模糊搜索非禁用的用户。
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param q query string true "搜索关键字"
+// @Success 200 {object} response.Body{data=[]service.UserResponse}
+// @Failure 401 {object} response.Body
+// @Failure 500 {object} response.Body
+// @Router /users/search [get]
+func (h *AuthHandler) SearchUsers(c *gin.Context) {
+	_, ok := middleware.CurrentUserID(c)
+	if !ok {
+		response.Error(c, http.StatusUnauthorized, "未登录")
+		return
+	}
+
+	q := c.Query("q")
+	results, err := h.svc.SearchUsers(c.Request.Context(), service.SearchUsersRequest{Q: q})
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Success(c, results)
+}
+
 func statusFromError(err error) int {
 	if errors.Is(err, domain.ErrUserNotFound) {
 		return http.StatusNotFound

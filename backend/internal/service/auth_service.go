@@ -41,6 +41,10 @@ type UpdateProfileRequest struct {
 	Supervisor        string
 }
 
+type SearchUsersRequest struct {
+	Q string
+}
+
 type WorkspaceCreator interface {
 	CreatePrivateWorkspace(ctx context.Context, userID string) error
 }
@@ -241,4 +245,30 @@ func toUserResponse(user *domain.User) UserResponse {
 		DisplayName:       displayName,
 		Status:            user.Status,
 	}
+}
+
+func (s *AuthService) SearchUsers(ctx context.Context, req SearchUsersRequest) ([]UserResponse, error) {
+	q := strings.TrimSpace(req.Q)
+	if q == "" {
+		return []UserResponse{}, nil
+	}
+
+	filter := domain.UserListFilter{
+		Q:        q,
+		Page:     1,
+		PageSize: 50,
+	}
+
+	users, _, err := s.repo.List(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	var results []UserResponse
+	for _, user := range users {
+		if user.Status == domain.UserStatusActive {
+			results = append(results, toUserResponse(user))
+		}
+	}
+	return results, nil
 }
