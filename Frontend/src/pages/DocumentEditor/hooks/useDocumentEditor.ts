@@ -50,7 +50,7 @@ export function useDocumentEditor() {
       ])
       setDocument(docRes.data)
 
-      if (bodyRes && bodyRes.byteLength > 0) {
+      if (docRes.data.docType === 'rich_text' && bodyRes && bodyRes.byteLength > 0) {
         Y.applyUpdate(ydoc, new Uint8Array(bodyRes))
       }
     } catch (err) {

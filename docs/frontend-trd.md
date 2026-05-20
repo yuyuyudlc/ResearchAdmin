@@ -122,19 +122,11 @@ const editor = useEditor({
 - **第三步：协同光标与感知 (Awareness)**：
   集成 `@tiptap/extension-collaboration-cursor`，并从 `provider.awareness` 中同步其他协作者在文档中的动态光标位置与显示名称，于编辑器顶部展示当前在线人数。
 
-### 5.2 共享授权弹窗 (ACLModal) 的用户搜索功能重构
-- **现状分析**：由于缺少搜索 API，弹窗使用普通 `<Input>` 让用户打字录入对象 UUID，用户体验极差。
-- **重构路线**：
-  - 在 `ACLModal.tsx` 中，引入动态搜索下拉组件。
-  - 将原有的普通文本框替换为 `Select` 组件：
-    ```tsx
-    <Form.Item name="subjectId" label="选择用户/成员" style={{ minWidth: 240 }}>
-      <Select
-        showSearch
-        placeholder="输入用户名、邮箱或显示名检索"
-        filterOption={false}
-        onSearch={handleUserSearch} // handleUserSearch 动态触发 API：GET /api/v1/users/search?q=xxx
-        options={userOptions} // 后端返回的用户脱敏列表转换为 { label, value } 数据
-      />
-    </Form.Item>
-    ```
+### 5.2 共享授权弹窗 (ACLModal) 的用户搜索功能（已实现）
+- **实现方案**：在 `ACLModal.tsx` 中，引入动态搜索下拉组件，摆脱了以前用户必须手动复制粘贴 36 位 UUID 的痛点。
+- **具体实现细节**：
+  - **接口对接**：在 `Frontend/src/services/user.ts` 中封装了 `userService.search(q)`，请求 `GET /api/v1/users/search?q=xxx` 接口。
+  - **组件整合**：将 `ACLModal.tsx` 中的普通文本框替换为了 Ant Design 的 `<Select showSearch>` 组件。
+  - **搜索回调**：通过 `onSearch={handleUserSearch}`，触发模糊搜索，获取匹配的用户列表并更新 `searchedUsers` 状态。
+  - **选项展示**：将检索到的用户数据转化为 `{ value: u.id, label: `${u.displayName} (${u.email})` }` 的格式，以供用户直观选择。
+  - **编辑回显处理**：在编辑模式下，若当前授权的 `subjectId` 不在搜索列表中，程序会自动补接一个 `用户 ID: ${editing.subjectId}` 的 Fallback 选项，避免渲染为空，极大提升了用户体验与健壮性。

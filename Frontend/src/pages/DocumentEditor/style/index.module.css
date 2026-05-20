@@ -57,6 +57,14 @@
   margin: 0 0 12px;
 }
 
+.fileShell {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 64px 32px;
+  background: #fafafa;
+}
+
 @media (max-width: 760px) {
   .toolbar {
     flex-direction: column;

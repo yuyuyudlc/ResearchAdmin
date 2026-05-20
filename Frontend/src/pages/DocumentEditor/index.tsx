@@ -20,6 +20,8 @@ import {
   type DocumentMetaValues,
 } from './hooks/useDocumentEditor'
 import ACLModal from './components/ACLModal'
+import Icon from '../../components/Icon'
+import { documentService } from '../../services'
 import styles from './style/index.module.css'
 
 const { Text, Title } = Typography
@@ -100,7 +102,7 @@ export default function DocumentEditorPage() {
     )
   }
 
-  if (!editor) {
+  if (!editor && document?.docType === 'rich_text') {
     return (
       <div className={styles.center}>
         <Spin tip="初始化编辑器..." />
@@ -164,23 +166,27 @@ export default function DocumentEditorPage() {
   }
 
   const handleDownload = async () => {
+    if (!document?.id) return
     try {
+      message.loading({ content: '正在准备下载...', key: 'downloading', duration: 0 })
       const data = await downloadDocument()
       if (data?.sourceStorageKey) {
-        Modal.info({
-          title: '文档源文件',
-          content: (
-            <div>
-              <Text>存储键：</Text>
-              <Text code>{data.sourceStorageKey}</Text>
-            </div>
-          ),
-        })
+        const buffer = await documentService.getBody(document.id)
+        const blob = new Blob([buffer], { type: 'application/octet-stream' })
+        const url = window.URL.createObjectURL(blob)
+        const link = window.document.createElement('a')
+        link.href = url
+        link.download = data.sourceStorageKey
+        window.document.body.appendChild(link)
+        link.click()
+        window.document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+        message.success({ content: '下载成功', key: 'downloading' })
       } else {
-        message.info('该文档无可下载的源文件')
+        message.info({ content: '该文档无可下载的源文件', key: 'downloading' })
       }
     } catch (err) {
-      message.error(err instanceof Error ? err.message : '下载失败')
+      message.error({ content: err instanceof Error ? err.message : '下载失败', key: 'downloading' })
     }
   }
 
@@ -206,15 +212,17 @@ export default function DocumentEditorPage() {
         </div>
 
         <Space wrap>
-          <Button
-            type="primary"
-            loading={saving}
-            onClick={() =>
-              saveBody().then(() => message.success('文档已保存'))
-            }
-          >
-            保存
-          </Button>
+          {document?.docType === 'rich_text' && (
+            <Button
+              type="primary"
+              loading={saving}
+              onClick={() =>
+                saveBody().then(() => message.success('文档已保存'))
+              }
+            >
+              保存
+            </Button>
+          )}
           <Button onClick={() => setMetaOpen(true)}>文档信息</Button>
           <Button onClick={() => setMoveOpen(true)}>移动</Button>
           <Button onClick={() => setAclOpen(true)}>权限</Button>
@@ -234,9 +242,28 @@ export default function DocumentEditorPage() {
         <Alert className={styles.alert} type="error" message={error} showIcon />
       )}
 
-      <div className={styles.editorShell}>
-        <EditorContent editor={editor} />
-      </div>
+      {document?.docType === 'rich_text' ? (
+        <div className={styles.editorShell}>
+          <EditorContent editor={editor} />
+        </div>
+      ) : (
+        <div className={styles.fileShell}>
+          <Result
+            icon={<Icon name="file" size={72} style={{ color: '#1677ff' }} />}
+            title={document?.title || '未命名附件'}
+            subTitle={
+              document?.summary
+                ? `文件描述：${document.summary}`
+                : '当前文件为附件格式，不支持在线编辑。请下载后查看或使用专业软件进行编辑。'
+            }
+            extra={
+              <Button type="primary" size="large" onClick={handleDownload}>
+                下载附件源文件
+              </Button>
+            }
+          />
+        </div>
+      )}
 
       <Modal
         title="文档信息"

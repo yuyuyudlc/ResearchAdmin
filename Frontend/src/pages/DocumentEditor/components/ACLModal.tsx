@@ -13,8 +13,8 @@ import {
   Tag,
   Typography,
 } from 'antd'
-import { PERMISSION } from '../../../services/types'
-import type { ACLItem } from '../../../services/types'
+import { PERMISSION, userService } from '../../../services'
+import type { ACLItem, User } from '../../../services'
 import { useDocumentACL } from '../hooks/useDocumentACL'
 
 const { Text } = Typography
@@ -58,9 +58,28 @@ export default function ACLModal({ open, documentId, onClose }: Props) {
   const { message } = App.useApp()
   const [form] = Form.useForm<ACLFormValues>()
   const [editing, setEditing] = useState<ACLItem | null>(null)
+  const [searchedUsers, setSearchedUsers] = useState<User[]>([])
+  const [searchingUsers, setSearchingUsers] = useState(false)
 
   const { items, loading, submitting, refresh, createACL, updateACL, removeACL } =
     useDocumentACL(documentId)
+
+  const handleUserSearch = async (query: string) => {
+    const trimmed = query.trim()
+    if (!trimmed) {
+      setSearchedUsers([])
+      return
+    }
+    setSearchingUsers(true)
+    try {
+      const res = await userService.search(trimmed)
+      setSearchedUsers(res.data)
+    } catch (err) {
+      console.error('Failed to search users:', err)
+    } finally {
+      setSearchingUsers(false)
+    }
+  }
 
   useEffect(() => {
     if (open) {
@@ -72,6 +91,7 @@ export default function ACLModal({ open, documentId, onClose }: Props) {
         inherit: true,
       })
       setEditing(null)
+      setSearchedUsers([])
     }
   }, [open, form, refresh])
 
@@ -93,6 +113,7 @@ export default function ACLModal({ open, documentId, onClose }: Props) {
       permissions: [PERMISSION.READ],
       inherit: true,
     })
+    setSearchedUsers([])
   }
 
   const submit = async () => {
@@ -148,8 +169,50 @@ export default function ACLModal({ open, documentId, onClose }: Props) {
               {() => {
                 const subjectType = form.getFieldValue('subjectType')
                 if (subjectType === 'public') return null
+                if (subjectType === 'user') {
+                  const options = searchedUsers.map((u) => ({
+                    value: u.id,
+                    label: `${u.displayName} (${u.email})`,
+                  }))
+                  if (
+                    editing &&
+                    editing.subjectType === 'user' &&
+                    editing.subjectId &&
+                    !searchedUsers.some((u) => u.id === editing.subjectId)
+                  ) {
+                    options.push({
+                      value: editing.subjectId,
+                      label: `用户 ID: ${editing.subjectId}`,
+                    })
+                  }
+
+                  return (
+                    <Form.Item
+                      name="subjectId"
+                      label="选择用户"
+                      style={{ minWidth: 280 }}
+                      rules={[{ required: true, message: '请选择用户' }]}
+                    >
+                      <Select
+                        showSearch
+                        disabled={!!editing}
+                        placeholder="输入用户名/邮箱/显示名搜索"
+                        defaultActiveFirstOption={false}
+                        filterOption={false}
+                        onSearch={handleUserSearch}
+                        notFoundContent={searchingUsers ? <Spin size="small" /> : '无匹配用户'}
+                        options={options}
+                      />
+                    </Form.Item>
+                  )
+                }
                 return (
-                  <Form.Item name="subjectId" label="对象ID" style={{ minWidth: 240 }}>
+                  <Form.Item
+                    name="subjectId"
+                    label="对象ID"
+                    style={{ minWidth: 240 }}
+                    rules={[{ required: true, message: '请输入对象ID' }]}
+                  >
                     <Input disabled={!!editing} placeholder="用户/成员ID" />
                   </Form.Item>
                 )
