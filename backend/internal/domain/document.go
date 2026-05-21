@@ -100,6 +100,8 @@ const (
 	BodyTypeYjsState = "yjs_state"
 	BodyTypePdf      = "pdf"
 	BodyTypeWord     = "word"
+	BodyTypeExcel    = "excel"
+	BodyTypePpt      = "ppt"
 	BodyTypeVideo    = "video"
 )
 

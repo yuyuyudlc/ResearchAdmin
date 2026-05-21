@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, startTransition } from 'react'
 import { aclService } from '../../../services/acl'
 import type {
   ACLItem,
@@ -33,7 +33,9 @@ export function useDocumentACL(documentId: string | undefined) {
   }, [documentId])
 
   useEffect(() => {
-    fetchAll()
+    startTransition(() => {
+      fetchAll()
+    })
   }, [fetchAll])
 
   const createACL = async (data: CreateACLRequest) => {

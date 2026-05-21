@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, startTransition } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Collaboration from '@tiptap/extension-collaboration'
 import StarterKit from '@tiptap/starter-kit'
@@ -6,6 +6,7 @@ import { useEditor } from '@tiptap/react'
 import * as Y from 'yjs'
 import type { DocumentNode } from '../../../services/types'
 import { documentService } from '../../../services/document'
+import { inferBodyType } from '../file-viewers'
 
 export interface DocumentMetaValues {
   title: string
@@ -15,8 +16,10 @@ export interface DocumentMetaValues {
 export function useDocumentEditor() {
   const { documentId } = useParams<{ documentId: string }>()
   const navigate = useNavigate()
-  const ydoc = useMemo(() => new Y.Doc(), [documentId])
+  const ydoc = useMemo(() => new Y.Doc(), [])
   const [document, setDocument] = useState<DocumentNode | null>(null)
+  const [bodyData, setBodyData] = useState<ArrayBuffer | null>(null)
+  const [bodyLoading, setBodyLoading] = useState(true)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [updating, setUpdating] = useState(false)
@@ -44,20 +47,26 @@ export function useDocumentEditor() {
     setLoading(true)
     setError('')
     try {
-      const [docRes, bodyRes] = await Promise.all([
-        documentService.getDetail(documentId),
-        documentService.getBody(documentId).catch(() => null),
-      ])
-      setDocument(docRes.data)
+      const docRes = await documentService.getDetail(documentId)
+      startTransition(() => {
+        setDocument(docRes.data)
+      })
 
-      if (docRes.data.docType === 'rich_text' && bodyRes && bodyRes.byteLength > 0) {
-        Y.applyUpdate(ydoc, new Uint8Array(bodyRes))
+      if (docRes.data.docType === 'rich_text') {
+        const bodyRes = await documentService.getBody(documentId).catch(() => null)
+        if (bodyRes && bodyRes.byteLength > 0) {
+          Y.applyUpdate(ydoc, new Uint8Array(bodyRes))
+        }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : '加载文档失败')
-      setDocument(null)
+      startTransition(() => {
+        setError(err instanceof Error ? err.message : '加载文档失败')
+        setDocument(null)
+      })
     } finally {
-      setLoading(false)
+      startTransition(() => {
+        setLoading(false)
+      })
     }
   }, [documentId, ydoc])
 
@@ -71,12 +80,58 @@ export function useDocumentEditor() {
     }
   }, [ydoc])
 
+  const loadBodyData = useCallback(async () => {
+    if (!documentId || !document || document.docType !== 'file') return
+    setBodyLoading(true)
+    try {
+      const bodyRes = await documentService.getBody(documentId)
+      startTransition(() => {
+        setBodyData(bodyRes)
+      })
+    } catch {
+      startTransition(() => {
+        setBodyData(null)
+      })
+    } finally {
+      startTransition(() => {
+        setBodyLoading(false)
+      })
+    }
+  }, [documentId, document])
+
+  useEffect(() => {
+    if (document && document.docType === 'file') {
+      loadBodyData()
+    }
+  }, [document, loadBodyData])
+
+  const bodyType = useMemo(() => {
+    if (!document) return null
+    if (document.docType === 'rich_text') return 'rich_text'
+    return inferBodyType(document.sourceStorageKey ?? '')
+  }, [document])
+
   const saveBody = async () => {
     if (!documentId || !editor) return
     setSaving(true)
     try {
       const update = Y.encodeStateAsUpdate(ydoc)
       await documentService.putBody(documentId, update)
+      setLastSaved(new Date())
+      setError('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '保存失败')
+      throw err
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const saveFileBody = async (data: Uint8Array, fileBodyType: string) => {
+    if (!documentId) return
+    setSaving(true)
+    try {
+      await documentService.putFileBody(documentId, data, fileBodyType)
       setLastSaved(new Date())
       setError('')
     } catch (err) {
@@ -118,7 +173,6 @@ export function useDocumentEditor() {
   const restoreDocument = async () => {
     if (!documentId) return
     const res = await documentService.restore(documentId)
-    // refresh detail
     await fetchDocument()
     return res
   }
@@ -147,13 +201,18 @@ export function useDocumentEditor() {
   return {
     document,
     editor,
+    bodyData,
+    bodyType,
+    bodyLoading,
     loading,
     saving,
     updating,
     lastSaved,
     error,
     fetchDocument,
+    loadBodyData,
     saveBody,
+    saveFileBody,
     updateMeta,
     deleteDocument,
     archiveDocument,

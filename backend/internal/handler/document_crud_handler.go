@@ -326,6 +326,10 @@ func inferBodyType(filename string) string {
 		return domain.BodyTypePdf
 	case ".doc", ".docx":
 		return domain.BodyTypeWord
+	case ".xls", ".xlsx":
+		return domain.BodyTypeExcel
+	case ".ppt", ".pptx":
+		return domain.BodyTypePpt
 	case ".mp4", ".mov", ".avi", ".mkv":
 		return domain.BodyTypeVideo
 	default:

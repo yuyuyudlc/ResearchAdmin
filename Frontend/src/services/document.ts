@@ -53,4 +53,11 @@ export const documentService = {
       ...headers,
     })
   },
+
+  putFileBody(documentId: string, data: Uint8Array, bodyType: string) {
+    return putBinary<{ size: number }>(`/documents/${documentId}/body`, data, {
+      'Content-Type': 'application/octet-stream',
+      'X-Body-Type': bodyType,
+    })
+  },
 }

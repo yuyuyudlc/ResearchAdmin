@@ -93,6 +93,7 @@ export interface DocumentNode {
   sortOrder: number
   permissionBit: number
   hasChildren: boolean
+  sourceStorageKey?: string
   createdAt: string
   updatedAt: string
 }

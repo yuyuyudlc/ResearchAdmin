@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, startTransition } from 'react'
 import {
   App,
   Button,
@@ -90,8 +90,10 @@ export default function ACLModal({ open, documentId, onClose }: Props) {
         permissions: [PERMISSION.READ],
         inherit: true,
       })
-      setEditing(null)
-      setSearchedUsers([])
+      startTransition(() => {
+        setEditing(null)
+        setSearchedUsers([])
+      })
     }
   }, [open, form, refresh])
 

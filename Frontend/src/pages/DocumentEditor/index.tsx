@@ -20,6 +20,7 @@ import {
   type DocumentMetaValues,
 } from './hooks/useDocumentEditor'
 import ACLModal from './components/ACLModal'
+import { PdfViewer, WordEditor, ExcelEditor, PptxViewer } from './file-viewers'
 import Icon from '../../components/Icon'
 import { documentService } from '../../services'
 import styles from './style/index.module.css'
@@ -42,6 +43,9 @@ export default function DocumentEditorPage() {
   const {
     document,
     editor,
+    bodyData,
+    bodyType,
+    bodyLoading,
     loading,
     saving,
     updating,
@@ -49,6 +53,7 @@ export default function DocumentEditorPage() {
     error,
     fetchDocument,
     saveBody,
+    saveFileBody,
     updateMeta,
     deleteDocument,
     archiveDocument,
@@ -190,7 +195,86 @@ export default function DocumentEditorPage() {
     }
   }
 
+  const handleSaveFileBody = async (data: Uint8Array) => {
+    if (!bodyType) {
+      throw new Error('无法确定文件类型')
+    }
+    await saveFileBody(data, bodyType)
+  }
+
   const isArchived = document?.status === 'archived'
+  const isRichText = document?.docType === 'rich_text'
+  const isFile = document?.docType === 'file'
+  const hasViewer = isFile && bodyType && bodyType !== 'yjs_state'
+
+  const renderFileViewer = () => {
+    if (bodyLoading) {
+      return (
+        <div className={styles.center} style={{ minHeight: 400 }}>
+          <Spin tip="加载文件内容..." />
+        </div>
+      )
+    }
+    if (!bodyData) {
+      return (
+        <div className={styles.fileShell}>
+          <Result
+            icon={<Icon name="file" size={72} style={{ color: '#1677ff' }} />}
+            title={document?.title || '未命名附件'}
+            subTitle="文件内容加载失败，请尝试刷新或重新下载"
+            extra={
+              <Button type="primary" size="large" onClick={handleDownload}>
+                下载附件源文件
+              </Button>
+            }
+          />
+        </div>
+      )
+    }
+
+    switch (bodyType) {
+      case 'pdf':
+        return <PdfViewer data={bodyData} />
+      case 'word':
+        return (
+          <WordEditor
+            data={bodyData}
+            filename={document?.sourceStorageKey}
+            onSave={handleSaveFileBody}
+            saving={saving}
+          />
+        )
+      case 'excel':
+        return (
+          <ExcelEditor
+            data={bodyData}
+            onSave={handleSaveFileBody}
+            saving={saving}
+          />
+        )
+      case 'ppt':
+        return <PptxViewer data={bodyData} filename={document?.sourceStorageKey} />
+      default:
+        return (
+          <div className={styles.fileShell}>
+            <Result
+              icon={<Icon name="file" size={72} style={{ color: '#1677ff' }} />}
+              title={document?.title || '未命名附件'}
+              subTitle={
+                document?.summary
+                  ? `文件描述：${document.summary}`
+                  : '当前文件为附件格式，不支持在线预览。请下载后查看或使用专业软件进行编辑。'
+              }
+              extra={
+                <Button type="primary" size="large" onClick={handleDownload}>
+                  下载附件源文件
+                </Button>
+              }
+            />
+          </div>
+        )
+    }
+  }
 
   return (
     <div className={styles.page}>
@@ -203,7 +287,7 @@ export default function DocumentEditorPage() {
             {document?.title || '未命名文档'}
           </Title>
           <Space size={8} wrap>
-            <Tag>{document?.docType === 'rich_text' ? '富文本' : document?.docType || '文档'}</Tag>
+            <Tag>{isRichText ? '富文本' : bodyType ? bodyType.toUpperCase() : document?.docType || '文档'}</Tag>
             {isArchived && <Tag color="orange">已归档</Tag>}
             {lastSaved && (
               <Text type="secondary">上次保存: {lastSaved.toLocaleTimeString()}</Text>
@@ -212,7 +296,7 @@ export default function DocumentEditorPage() {
         </div>
 
         <Space wrap>
-          {document?.docType === 'rich_text' && (
+          {isRichText && (
             <Button
               type="primary"
               loading={saving}
@@ -242,10 +326,12 @@ export default function DocumentEditorPage() {
         <Alert className={styles.alert} type="error" message={error} showIcon />
       )}
 
-      {document?.docType === 'rich_text' ? (
+      {isRichText ? (
         <div className={styles.editorShell}>
           <EditorContent editor={editor} />
         </div>
+      ) : hasViewer ? (
+        renderFileViewer()
       ) : (
         <div className={styles.fileShell}>
           <Result
@@ -254,7 +340,7 @@ export default function DocumentEditorPage() {
             subTitle={
               document?.summary
                 ? `文件描述：${document.summary}`
-                : '当前文件为附件格式，不支持在线编辑。请下载后查看或使用专业软件进行编辑。'
+                : '当前文件为附件格式，不支持在线预览。请下载后查看或使用专业软件进行编辑。'
             }
             extra={
               <Button type="primary" size="large" onClick={handleDownload}>
