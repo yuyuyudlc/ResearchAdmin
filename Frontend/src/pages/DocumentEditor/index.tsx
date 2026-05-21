@@ -20,7 +20,7 @@ import {
   type DocumentMetaValues,
 } from './hooks/useDocumentEditor'
 import ACLModal from './components/ACLModal'
-import { PdfViewer, WordEditor, ExcelEditor, PptxViewer } from './file-viewers'
+import { PdfViewer, WordEditor, ExcelEditor, PptxViewer, AudioViewer, VideoViewer, DatasetViewer } from './file-viewers'
 import Icon from '../../components/Icon'
 import { documentService } from '../../services'
 import styles from './style/index.module.css'
@@ -254,6 +254,12 @@ export default function DocumentEditorPage() {
         )
       case 'ppt':
         return <PptxViewer data={bodyData} filename={document?.sourceStorageKey} />
+      case 'audio':
+        return <AudioViewer data={bodyData} filename={document?.sourceStorageKey} />
+      case 'video':
+        return <VideoViewer data={bodyData} filename={document?.sourceStorageKey} />
+      case 'dataset':
+        return <DatasetViewer data={bodyData} filename={document?.sourceStorageKey} />
       default:
         return (
           <div className={styles.fileShell}>
