@@ -15,6 +15,10 @@ export type IconName =
   | 'refresh'
   | 'search'
   | 'settings'
+  | 'comment'
+  | 'discussion'
+  | 'check'
+  | 'locate'
 
 const ICON_MAP: Record<IconName, string> = {
   home: 'solar:home-2-linear',
@@ -30,6 +34,10 @@ const ICON_MAP: Record<IconName, string> = {
   refresh: 'mdi:refresh',
   search: 'mdi:magnify',
   settings: 'mdi:cog-outline',
+  comment: 'solar:chat-round-line-linear',
+  discussion: 'solar:chat-square-like-linear',
+  check: 'solar:check-circle-linear',
+  locate: 'solar:map-point-wave-linear',
 }
 
 interface Props {

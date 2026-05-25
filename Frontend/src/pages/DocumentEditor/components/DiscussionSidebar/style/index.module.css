@@ -1,0 +1,188 @@
+.sidebar {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  border-left: 1px solid #ebebeb;
+  background:
+    radial-gradient(circle at top left, rgba(0, 112, 243, 0.06), transparent 26%),
+    linear-gradient(180deg, #fcfdff 0%, #ffffff 100%);
+}
+
+.header {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid rgba(23, 23, 23, 0.06);
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #171717;
+}
+
+.subtitle {
+  margin-top: 8px;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.statusRow {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.statusChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #f6f8fb;
+  color: #4d4d4d;
+  font-size: 12px;
+}
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px;
+}
+
+.collaborators {
+  margin-bottom: 18px;
+  padding: 14px;
+  border: 1px solid rgba(23, 23, 23, 0.06);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.collaboratorList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.collaborator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: #f7f9fc;
+}
+
+.threadList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.threadCard {
+  border: 1px solid rgba(23, 23, 23, 0.08);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 12px 24px rgba(23, 23, 23, 0.04);
+}
+
+.threadCardActive {
+  border-color: rgba(0, 112, 243, 0.4);
+  box-shadow:
+    0 14px 32px rgba(0, 112, 243, 0.12),
+    inset 0 0 0 1px rgba(0, 112, 243, 0.08);
+}
+
+.threadHeader {
+  padding: 16px 16px 12px;
+}
+
+.threadHeaderTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.threadAnchor {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f8fbff;
+  color: #4d4d4d;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.threadAnchorInvalid {
+  background: #fff7e8;
+  color: #ad6800;
+}
+
+.threadBody {
+  padding: 0 16px 16px;
+}
+
+.messageTree {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.messageNode {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 12px;
+  border-left: 2px solid rgba(23, 23, 23, 0.06);
+}
+
+.messageCard {
+  padding: 12px;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.messageMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.messageAuthor {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.messageContent {
+  color: #171717;
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.replyComposer {
+  margin-top: 10px;
+}
+
+.empty {
+  padding: 36px 20px;
+  border: 1px dashed rgba(23, 23, 23, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+}

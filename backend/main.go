@@ -6,10 +6,14 @@ import (
 	"research/internal/auth"
 	"research/internal/config"
 	"research/internal/database"
+	"research/internal/domain"
 	"research/internal/handler"
 	"research/internal/repository"
 	"research/internal/router"
 	"research/internal/service"
+
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 // @title Research Admin Backend API
@@ -27,6 +31,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to connect database: %v", err)
 	}
+
+	seedAdmin(db)
 
 	tokenManager := auth.NewTokenManager(cfg.JWT.Secret, cfg.JWT.TTL)
 	userRepo := repository.NewUserRepository(db)
@@ -49,5 +55,28 @@ func main() {
 	log.Printf("Server starting on %s...", cfg.HTTPAddr)
 	if err := r.Run(cfg.HTTPAddr); err != nil {
 		log.Fatalf("failed to run server: %v", err)
+	}
+}
+
+func seedAdmin(db *gorm.DB) {
+	var user domain.User
+	if err := db.Where("email = ?", "admin@research.com").First(&user).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			hash, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+			admin := domain.User{
+				Username:     "admin",
+				Email:        "admin@research.com",
+				PasswordHash: string(hash),
+				DisplayName:  "系统管理员",
+				Status:       domain.UserStatusActive,
+			}
+			if err := db.Create(&admin).Error; err != nil {
+				log.Printf("failed to seed admin user: %v", err)
+			} else {
+				log.Println("Admin user seeded successfully.")
+			}
+		} else {
+			log.Printf("failed to query admin user: %v", err)
+		}
 	}
 }
