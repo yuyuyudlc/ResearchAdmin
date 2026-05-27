@@ -17,6 +17,7 @@ func New(
 	adminUserHandler *handler.AdminUserHandler,
 	adminOrgHandler *handler.AdminOrganizationHandler,
 	tokenManager *auth.TokenManager,
+	internalToken string,
 ) *gin.Engine {
 	r := gin.Default()
 
@@ -27,12 +28,12 @@ func New(
 	authGroup.POST("/register", authHandler.Register)
 
 	protectedAuthGroup := authGroup.Group("")
-	protectedAuthGroup.Use(middleware.JWTAuth(tokenManager))
+	protectedAuthGroup.Use(middleware.JWTAuth(tokenManager, internalToken))
 	protectedAuthGroup.PUT("/password", authHandler.ChangePassword)
 	protectedAuthGroup.PUT("/profile", authHandler.UpdateProfile)
 
 	api := r.Group("/api/v1")
-	api.Use(middleware.JWTAuth(tokenManager))
+	api.Use(middleware.JWTAuth(tokenManager, internalToken))
 	api.GET("/users/search", authHandler.SearchUsers)
 	api.POST("/workspaces", documentHandler.CreateWorkspace)
 	api.GET("/workspaces", documentHandler.ListWorkspaces)

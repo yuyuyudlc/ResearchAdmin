@@ -187,15 +187,11 @@ export default function DiscussionSidebar({
       <header className={styles.header}>
         <div className={styles.titleRow}>
           <span className={styles.title}>
-            <Icon name="discussion" size={18} color="#0070f3" />
             协同讨论
           </span>
           <Badge status={providerStatus === 'connected' ? 'success' : 'processing'} text={statusText} />
         </div>
 
-        <div className={styles.subtitle}>
-          线程按批注锚点分组，支持无限层级回复。已解决线程默认折叠保留，减少阅读干扰。
-        </div>
 
         <div className={styles.statusRow}>
           <span className={styles.statusChip}>

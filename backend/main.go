@@ -50,7 +50,7 @@ func main() {
 	documentHandler := handler.NewDocumentHandler(documentService)
 	adminUserHandler := handler.NewAdminUserHandler(adminUserService)
 	adminOrgHandler := handler.NewAdminOrganizationHandler(adminOrgService)
-	r := router.New(authHandler, documentHandler, adminUserHandler, adminOrgHandler, tokenManager)
+	r := router.New(authHandler, documentHandler, adminUserHandler, adminOrgHandler, tokenManager, cfg.InternalToken)
 
 	log.Printf("Server starting on %s...", cfg.HTTPAddr)
 	if err := r.Run(cfg.HTTPAddr); err != nil {

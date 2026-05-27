@@ -78,6 +78,9 @@ export function useDocumentEditor() {
   const currentUser = useMemo(() => toCurrentUserIdentity(user), [user]);
   const ydoc = useMemo(() => new Y.Doc(), [documentId]);
   const autoSaveTimerRef = useRef<number | null>(null);
+  const editorRef = useRef<ReturnType<typeof useEditor> | null>(null);
+  const fetchInFlightRef = useRef(false);
+  const lastFetchedIdRef = useRef<string | null>(null);
   const [provider, setProvider] = useState<WebsocketProvider | null>(null);
   const [providerStatus, setProviderStatus] = useState<
     "connecting" | "connected" | "disconnected"
@@ -146,6 +149,10 @@ export function useDocumentEditor() {
     [extensions],
   );
 
+  useEffect(() => {
+    editorRef.current = editor;
+  }, [editor]);
+
   const canEditDocument =
     !!document &&
     hasEditPermission(document.permissionBit) &&
@@ -172,7 +179,7 @@ export function useDocumentEditor() {
       documentId,
       ydoc,
       {
-        connect: true,
+        connect: false,
         maxBackoffTime: 10000,
       },
     );
@@ -180,7 +187,12 @@ export function useDocumentEditor() {
     setProvider(nextProvider);
     setProviderStatus("connecting");
 
+    const connectTimer = window.setTimeout(() => {
+      nextProvider.connect();
+    }, 0);
+
     return () => {
+      window.clearTimeout(connectTimer);
       nextProvider.destroy();
       setProvider(null);
       setProviderStatus("disconnected");
@@ -236,6 +248,12 @@ export function useDocumentEditor() {
       return;
     }
 
+    if (fetchInFlightRef.current && lastFetchedIdRef.current === documentId) {
+      return;
+    }
+    fetchInFlightRef.current = true;
+    lastFetchedIdRef.current = documentId;
+
     setLoading(true);
     setBodyLoading(true);
     setError("");
@@ -253,7 +271,12 @@ export function useDocumentEditor() {
         if (bodyRes && bodyRes.byteLength > 0) {
           Y.applyUpdate(ydoc, new Uint8Array(bodyRes));
         }
-        syncThreads();
+        const currentEditor = editorRef.current;
+        if (currentEditor) {
+          startTransition(() => {
+            setThreads(readCommentThreads(ydoc, currentEditor));
+          });
+        }
       }
     } catch (err) {
       startTransition(() => {
@@ -265,10 +288,14 @@ export function useDocumentEditor() {
         setLoading(false);
         setBodyLoading(false);
       });
+      fetchInFlightRef.current = false;
     }
-  }, [documentId, syncThreads, ydoc]);
+  }, [documentId, ydoc]);
 
   useEffect(() => {
+    setDocument(null);
+    setBodyData(null);
+    setError("");
     fetchDocument();
   }, [fetchDocument]);
 
@@ -346,12 +373,23 @@ export function useDocumentEditor() {
   }, [canEditDocument, editor, isRichTextDocument, syncThreads, ydoc]);
 
   useEffect(() => {
-    if (!editor || !editor.view?.dom) {
+    if (!editor) {
+      return;
+    }
+
+    let viewDom: HTMLElement | null = null;
+    try {
+      viewDom = editor.view?.dom ?? null;
+    } catch {
+      return;
+    }
+
+    if (!viewDom) {
       return;
     }
 
     const currentAnchors = collectThreadAnchors(editor);
-    editor.view.dom
+    viewDom
       .querySelectorAll<HTMLElement>("[data-thread-id]")
       .forEach((node) => {
         const threadId = node.dataset.threadId ?? "";

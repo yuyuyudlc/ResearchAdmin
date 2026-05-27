@@ -12,6 +12,7 @@ type Config struct {
 	HTTPAddr string
 	DBDSN    string
 	JWT      JWTConfig
+	InternalToken string
 }
 
 type JWTConfig struct {
@@ -29,6 +30,7 @@ func Load() Config {
 			Secret: getEnv("JWT_SECRET", "dev_secret_change_me"),
 			TTL:    getDurationEnv("JWT_TTL_SECONDS", 24*time.Hour),
 		},
+		InternalToken: getEnv("GO_INTERNAL_TOKEN", ""),
 	}
 }
 

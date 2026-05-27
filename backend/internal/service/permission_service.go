@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"research/internal/domain"
+	"research/internal/requestcontext"
 )
 
 func (s *DocumentService) MyPermission(ctx context.Context, userID, documentID string) (*PermissionResponse, error) {
@@ -57,6 +58,9 @@ func (s *DocumentService) ComputePermission(ctx context.Context, userID string, 
 }
 
 func (s *DocumentService) requireDocumentPermission(ctx context.Context, userID string, doc *domain.Document, bit int) error {
+	if requestcontext.IsInternalRequest(ctx) {
+		return nil
+	}
 	perm, err := s.ComputePermission(ctx, userID, doc)
 	if err != nil {
 		return err

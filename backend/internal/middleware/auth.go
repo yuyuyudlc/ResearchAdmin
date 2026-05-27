@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"research/internal/auth"
+	"research/internal/requestcontext"
 	"research/internal/response"
 
 	"github.com/gin-gonic/gin"
@@ -16,8 +17,17 @@ const (
 	adminUsername          = "admin"
 )
 
-func JWTAuth(tokenManager *auth.TokenManager) gin.HandlerFunc {
+func JWTAuth(tokenManager *auth.TokenManager, internalToken string) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if isInternalAllowed(c, internalToken) {
+			ctx := requestcontext.WithInternalRequest(c.Request.Context())
+			c.Request = c.Request.WithContext(ctx)
+			c.Set(currentUserIDKey, "internal")
+			c.Set(currentUsernameKey, "internal")
+			c.Next()
+			return
+		}
+
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			response.Error(c, http.StatusUnauthorized, "缺少 Authorization 头")
@@ -43,6 +53,20 @@ func JWTAuth(tokenManager *auth.TokenManager) gin.HandlerFunc {
 		c.Set(currentUsernameKey, claims.Username)
 		c.Next()
 	}
+}
+
+func isInternalAllowed(c *gin.Context, internalToken string) bool {
+	if internalToken == "" {
+		return false
+	}
+	if c.GetHeader("X-Internal-Token") != internalToken {
+		return false
+	}
+	if c.Request.Method != http.MethodPut {
+		return false
+	}
+	path := c.Request.URL.Path
+	return strings.HasPrefix(path, "/api/v1/documents/") && strings.HasSuffix(path, "/body")
 }
 
 // AdminOnly 限制只有 username == "admin" 的用户可以访问。
