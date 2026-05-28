@@ -13,6 +13,35 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// ListHomeDocuments 获取首页文档列表
+// @Summary 获取首页文档列表
+// @Description 按 scope 返回当前用户的首页文档列表。scope=mine 返回我创建的，scope=recent 返回最近打开，scope=favorite 返回我收藏的。
+// @Tags documents
+// @Produce json
+// @Security BearerAuth
+// @Param scope query string true "列表范围：mine/recent/favorite"
+// @Param limit query int false "返回数量，默认 20，最大 50"
+// @Success 200 {object} response.Body
+// @Failure 400 {object} response.Body
+// @Failure 401 {object} response.Body
+// @Router /documents/home [get]
+func (h *DocumentHandler) ListHomeDocuments(c *gin.Context) {
+	userID, ok := currentUserID(c)
+	if !ok {
+		return
+	}
+	result, err := h.svc.ListHomeDocuments(c.Request.Context(), service.HomeDocumentListRequest{
+		UserID: userID,
+		Scope:  strings.TrimSpace(c.Query("scope")),
+		Limit:  parseLimit(c.Query("limit")),
+	})
+	if err != nil {
+		respondServiceError(c, err)
+		return
+	}
+	response.Success(c, result)
+}
+
 // CreateDocument 创建文档
 // @Summary 创建文档
 // @Description 在 workspace 下创建文档元数据。根文档要求 workspace 成员权限，子文档要求父文档 EDIT 权限。
@@ -239,6 +268,55 @@ func (h *DocumentHandler) MoveDocument(c *gin.Context) {
 		return
 	}
 	response.Success(c, item)
+}
+
+// FavoriteDocument 收藏文档
+// @Summary 收藏文档
+// @Description 当前用户收藏指定文档。要求当前用户至少拥有该文档 READ 权限，重复收藏保持幂等。
+// @Tags documents
+// @Produce json
+// @Security BearerAuth
+// @Param documentId path string true "文档 ID"
+// @Success 200 {object} response.Body
+// @Failure 401 {object} response.Body
+// @Failure 403 {object} response.Body
+// @Failure 404 {object} response.Body
+// @Router /documents/{documentId}/favorite [post]
+func (h *DocumentHandler) FavoriteDocument(c *gin.Context) {
+	userID, ok := currentUserID(c)
+	if !ok {
+		return
+	}
+	item, err := h.svc.FavoriteDocument(c.Request.Context(), userID, c.Param("documentId"))
+	if err != nil {
+		respondServiceError(c, err)
+		return
+	}
+	response.Success(c, item)
+}
+
+// UnfavoriteDocument 取消收藏文档
+// @Summary 取消收藏文档
+// @Description 当前用户取消收藏指定文档。要求当前用户至少拥有该文档 READ 权限。
+// @Tags documents
+// @Produce json
+// @Security BearerAuth
+// @Param documentId path string true "文档 ID"
+// @Success 200 {object} response.Body
+// @Failure 401 {object} response.Body
+// @Failure 403 {object} response.Body
+// @Failure 404 {object} response.Body
+// @Router /documents/{documentId}/favorite [delete]
+func (h *DocumentHandler) UnfavoriteDocument(c *gin.Context) {
+	userID, ok := currentUserID(c)
+	if !ok {
+		return
+	}
+	if err := h.svc.UnfavoriteDocument(c.Request.Context(), userID, c.Param("documentId")); err != nil {
+		respondServiceError(c, err)
+		return
+	}
+	response.Success(c, gin.H{"message": "取消收藏成功"})
 }
 
 // ArchiveDocument 归档文档

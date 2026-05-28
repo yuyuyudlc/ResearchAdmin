@@ -63,6 +63,19 @@ type DocumentItem struct {
 	HasChildren      bool                  `json:"hasChildren"`
 	CreatedAt        any                   `json:"createdAt"`
 	UpdatedAt        any                   `json:"updatedAt"`
+	OpenedAt         any                   `json:"openedAt,omitempty"`
+	FavoritedAt      any                   `json:"favoritedAt,omitempty"`
+	Favorited        bool                  `json:"favorited"`
+}
+
+type HomeDocumentListRequest struct {
+	UserID string
+	Scope  string
+	Limit  int
+}
+
+type HomeDocumentListResponse struct {
+	Items []DocumentItem `json:"items"`
 }
 
 type WorkspaceDirectoryResponse struct {

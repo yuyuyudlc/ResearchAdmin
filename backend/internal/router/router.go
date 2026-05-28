@@ -46,9 +46,12 @@ func New(
 	api.POST("/workspaces/:workspaceId/documents", documentHandler.CreateDocument)
 	api.POST("/workspaces/:workspaceId/documents/upload", documentHandler.UploadDocument)
 
+	api.GET("/documents/home", documentHandler.ListHomeDocuments)
 	api.GET("/documents/:documentId", documentHandler.GetDocument)
 	api.PATCH("/documents/:documentId", documentHandler.UpdateDocument)
 	api.POST("/documents/:documentId/move", documentHandler.MoveDocument)
+	api.POST("/documents/:documentId/favorite", documentHandler.FavoriteDocument)
+	api.DELETE("/documents/:documentId/favorite", documentHandler.UnfavoriteDocument)
 	api.POST("/documents/:documentId/archive", documentHandler.ArchiveDocument)
 	api.POST("/documents/:documentId/restore", documentHandler.RestoreDocument)
 	api.DELETE("/documents/:documentId", documentHandler.DeleteDocument)

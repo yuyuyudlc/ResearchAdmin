@@ -476,12 +476,13 @@
       "sortOrder": 1000,
       "permissionBit": 7,
       "hasChildren": false,
+      "favorited": false,
       "createdAt": "2026-05-20T16:00:00Z",
       "updatedAt": "2026-05-20T16:00:00Z"
     }
   }
   ```
-  *(注：该接口仅返回文档的基本属性及当前用户的权限掩码位图 `permissionBit`，不携带正文 `body` 以保证网络轻量。)*
+  *(注：该接口仅返回文档的基本属性、当前用户最终权限掩码位图 `permissionBit` 及当前用户是否收藏 `favorited`，不携带正文 `body` 以保证网络轻量。成功读取该接口会记录当前用户的最近打开时间。)*
 
 #### 4.4.4 修改文档基本信息
 - **方法与路径**：`PATCH /api/v1/documents/:documentId`
@@ -515,6 +516,78 @@
     "message": "success",
     "data": {
       "sourceStorageKey": "dataset-v2-final.xlsx"
+    }
+  }
+  ```
+
+#### 4.4.8 获取首页文档列表
+- **方法与路径**：`GET /api/v1/documents/home`
+- **用途**：为首页提供当前用户相关的文档列表。当前支持“我创建的”、“最近打开”、“我收藏的”三类。
+- **查询参数 (Query)**：
+  - `scope`（必填）：列表范围。
+    - `mine`：我创建的文档，按 `createdAt` 倒序。
+    - `recent`：最近打开的文档，按 `openedAt` 倒序。最近打开记录由 `GET /api/v1/documents/:documentId` 成功读取时写入。
+    - `favorite`：我收藏的文档，按 `favoritedAt` 倒序。
+  - `limit`（可选）：返回数量，默认 `20`，最大 `50`。
+- **权限要求**：登录用户。列表只返回当前用户仍具备 `READ` 权限、且未被删除的文档。
+- **响应体 (Data)**：
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "items": [
+        {
+          "id": "doc-uuid-v4",
+          "workspaceId": "workspace-uuid-v4",
+          "parentId": null,
+          "title": "实验记录",
+          "summary": "阶段性实验数据记录",
+          "ownerUserId": "user-uuid-v4",
+          "docType": "rich_text",
+          "status": "active",
+          "sortOrder": 1000,
+          "permissionBit": 7,
+          "hasChildren": false,
+          "favorited": true,
+          "openedAt": "2026-05-20T16:30:00Z",
+          "favoritedAt": "2026-05-20T16:20:00Z",
+          "createdAt": "2026-05-20T16:00:00Z",
+          "updatedAt": "2026-05-20T16:10:00Z"
+        }
+      ]
+    }
+  }
+  ```
+  *(注：`openedAt` 仅在 `scope=recent` 时返回；`favoritedAt` 仅在 `scope=favorite` 时返回。)*
+
+#### 4.4.9 收藏与取消收藏文档
+- **收藏方法与路径**：`POST /api/v1/documents/:documentId/favorite`
+- **取消收藏方法与路径**：`DELETE /api/v1/documents/:documentId/favorite`
+- **权限要求**：当前用户至少具备该文档的 `READ` 权限。
+- **业务逻辑**：
+  - 收藏操作以当前用户和文档 ID 为唯一键，重复收藏保持幂等。
+  - 取消收藏仅删除当前用户与该文档的收藏关系，不影响文档本身和其他用户收藏状态。
+- **收藏响应体 (Data)**：
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "id": "doc-uuid-v4",
+      "title": "实验记录",
+      "permissionBit": 7,
+      "favorited": true
+    }
+  }
+  ```
+- **取消收藏响应体 (Data)**：
+  ```json
+  {
+    "code": 0,
+    "message": "success",
+    "data": {
+      "message": "取消收藏成功"
     }
   }
   ```

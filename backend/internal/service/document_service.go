@@ -17,28 +17,34 @@ var (
 const fullPermission = domain.PermissionRead | domain.PermissionEdit | domain.PermissionManage
 
 type DocumentService struct {
-	workspaceRepo       domain.WorkspaceRepository
-	workspaceMemberRepo domain.WorkspaceMemberRepository
-	documentRepo        domain.DocumentRepository
-	docACLRepo          domain.DocACLRepository
-	userRepo            domain.UserRepository
-	bodyRepo            domain.DocumentBodyRepository
+	workspaceRepo        domain.WorkspaceRepository
+	workspaceMemberRepo  domain.WorkspaceMemberRepository
+	documentRepo         domain.DocumentRepository
+	documentAccessRepo   domain.DocumentAccessRepository
+	documentFavoriteRepo domain.DocumentFavoriteRepository
+	docACLRepo           domain.DocACLRepository
+	userRepo             domain.UserRepository
+	bodyRepo             domain.DocumentBodyRepository
 }
 
 func NewDocumentService(
 	workspaceRepo domain.WorkspaceRepository,
 	workspaceMemberRepo domain.WorkspaceMemberRepository,
 	documentRepo domain.DocumentRepository,
+	documentAccessRepo domain.DocumentAccessRepository,
+	documentFavoriteRepo domain.DocumentFavoriteRepository,
 	docACLRepo domain.DocACLRepository,
 	userRepo domain.UserRepository,
 	bodyRepo domain.DocumentBodyRepository,
 ) *DocumentService {
 	return &DocumentService{
-		workspaceRepo:       workspaceRepo,
-		workspaceMemberRepo: workspaceMemberRepo,
-		documentRepo:        documentRepo,
-		docACLRepo:          docACLRepo,
-		userRepo:            userRepo,
-		bodyRepo:            bodyRepo,
+		workspaceRepo:        workspaceRepo,
+		workspaceMemberRepo:  workspaceMemberRepo,
+		documentRepo:         documentRepo,
+		documentAccessRepo:   documentAccessRepo,
+		documentFavoriteRepo: documentFavoriteRepo,
+		docACLRepo:           docACLRepo,
+		userRepo:             userRepo,
+		bodyRepo:             bodyRepo,
 	}
 }

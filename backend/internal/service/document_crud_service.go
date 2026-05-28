@@ -70,11 +70,155 @@ func (s *DocumentService) GetDocumentDetail(ctx context.Context, userID, documen
 	if !hasPermission(perm, domain.PermissionRead) {
 		return nil, ErrForbidden
 	}
+	if s.documentAccessRepo != nil {
+		_ = s.documentAccessRepo.Touch(ctx, userID, doc.ID)
+	}
 	item, err := s.documentItem(ctx, doc, perm)
 	if err != nil {
 		return nil, err
 	}
+	item.Favorited = s.isFavorite(ctx, userID, doc.ID)
 	return &item, nil
+}
+
+func (s *DocumentService) ListHomeDocuments(ctx context.Context, req HomeDocumentListRequest) (*HomeDocumentListResponse, error) {
+	limit := req.Limit
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+
+	var docs []domain.Document
+	var recentDocs []domain.RecentDocument
+	var favoriteDocs []domain.FavoriteDocument
+	var err error
+	switch req.Scope {
+	case "mine":
+		docs, err = s.documentRepo.ListOwnedByUser(ctx, req.UserID, limit)
+	case "recent":
+		if s.documentAccessRepo == nil {
+			recentDocs = []domain.RecentDocument{}
+		} else {
+			recentDocs, err = s.documentAccessRepo.ListRecentByUser(ctx, req.UserID, limit)
+		}
+	case "favorite":
+		if s.documentFavoriteRepo == nil {
+			favoriteDocs = []domain.FavoriteDocument{}
+		} else {
+			favoriteDocs, err = s.documentFavoriteRepo.ListByUser(ctx, req.UserID, limit)
+		}
+	default:
+		return nil, fmt.Errorf("%w: scope 无效", ErrInvalidArgument)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	items := make([]DocumentItem, 0, len(docs))
+	if req.Scope == "recent" {
+		items = make([]DocumentItem, 0, len(recentDocs))
+		for i := range recentDocs {
+			item, err := s.readableDocumentItem(ctx, req.UserID, &recentDocs[i].Document)
+			if err != nil {
+				return nil, err
+			}
+			if item == nil {
+				continue
+			}
+			item.OpenedAt = recentDocs[i].OpenedAt
+			items = append(items, *item)
+		}
+		return &HomeDocumentListResponse{Items: items}, nil
+	}
+	if req.Scope == "favorite" {
+		items = make([]DocumentItem, 0, len(favoriteDocs))
+		for i := range favoriteDocs {
+			item, err := s.readableDocumentItem(ctx, req.UserID, &favoriteDocs[i].Document)
+			if err != nil {
+				return nil, err
+			}
+			if item == nil {
+				continue
+			}
+			item.Favorited = true
+			item.FavoritedAt = favoriteDocs[i].FavoritedAt
+			items = append(items, *item)
+		}
+		return &HomeDocumentListResponse{Items: items}, nil
+	}
+
+	for i := range docs {
+		item, err := s.readableDocumentItem(ctx, req.UserID, &docs[i])
+		if err != nil {
+			return nil, err
+		}
+		if item != nil {
+			items = append(items, *item)
+		}
+	}
+	return &HomeDocumentListResponse{Items: items}, nil
+}
+
+func (s *DocumentService) FavoriteDocument(ctx context.Context, userID, documentID string) (*DocumentItem, error) {
+	doc, err := s.getDocument(ctx, documentID)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.requireDocumentPermission(ctx, userID, doc, domain.PermissionRead); err != nil {
+		return nil, err
+	}
+	if s.documentFavoriteRepo != nil {
+		if err := s.documentFavoriteRepo.Add(ctx, userID, documentID); err != nil {
+			return nil, err
+		}
+	}
+	perm, err := s.ComputePermission(ctx, userID, doc)
+	if err != nil {
+		return nil, err
+	}
+	item, err := s.documentItem(ctx, doc, perm)
+	if err != nil {
+		return nil, err
+	}
+	item.Favorited = true
+	return &item, nil
+}
+
+func (s *DocumentService) UnfavoriteDocument(ctx context.Context, userID, documentID string) error {
+	doc, err := s.getDocument(ctx, documentID)
+	if err != nil {
+		return err
+	}
+	if err := s.requireDocumentPermission(ctx, userID, doc, domain.PermissionRead); err != nil {
+		return err
+	}
+	if s.documentFavoriteRepo == nil {
+		return nil
+	}
+	return s.documentFavoriteRepo.Delete(ctx, userID, documentID)
+}
+
+func (s *DocumentService) readableDocumentItem(ctx context.Context, userID string, doc *domain.Document) (*DocumentItem, error) {
+	perm, err := s.ComputePermission(ctx, userID, doc)
+	if err != nil {
+		return nil, err
+	}
+	if !hasPermission(perm, domain.PermissionRead) {
+		return nil, nil
+	}
+	item, err := s.documentItem(ctx, doc, perm)
+	if err != nil {
+		return nil, err
+	}
+	item.Favorited = s.isFavorite(ctx, userID, doc.ID)
+	return &item, nil
+}
+
+func (s *DocumentService) isFavorite(ctx context.Context, userID, documentID string) bool {
+	if s.documentFavoriteRepo == nil {
+		return false
+	}
+	ok, err := s.documentFavoriteRepo.Exists(ctx, userID, documentID)
+	return err == nil && ok
 }
 
 func (s *DocumentService) UpdateDocument(ctx context.Context, req UpdateDocumentRequest) (*DocumentItem, error) {
