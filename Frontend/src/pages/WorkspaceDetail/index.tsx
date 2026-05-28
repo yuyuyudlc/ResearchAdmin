@@ -288,7 +288,7 @@ export default function WorkspaceDetailPage() {
                       </Space>
                     }
                     description={
-                      <Space split={<span>·</span>} size={4}>
+                      <Space separator={<span>·</span>} size={4}>
                         <Text type="secondary">{node.summary || '暂无摘要'}</Text>
                         <Text type="secondary">更新: {formatTime(node.updatedAt)}</Text>
                       </Space>

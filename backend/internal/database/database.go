@@ -22,6 +22,7 @@ func Open(dsn string) (*gorm.DB, error) {
 		&domain.Document{},
 		&domain.DocACL{},
 		&domain.DocumentBody{},
+		&domain.SpreadsheetBlock{},
 	); err != nil {
 		return nil, err
 	}

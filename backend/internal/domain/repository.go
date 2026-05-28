@@ -52,6 +52,12 @@ type DocumentBodyRepository interface {
 	Delete(ctx context.Context, documentID string) error
 }
 
+type SpreadsheetBlockRepository interface {
+	GetByDocumentAndBlock(ctx context.Context, documentID, blockID string) (*SpreadsheetBlock, error)
+	Save(ctx context.Context, block *SpreadsheetBlock) error
+	AppendRecord(ctx context.Context, documentID, blockID string, record SpreadsheetRecord) (*SpreadsheetBlock, error)
+}
+
 type DocACLRepository interface {
 	Create(ctx context.Context, acl *DocACL) error
 	ListByDocument(ctx context.Context, documentID string) ([]DocACL, error)

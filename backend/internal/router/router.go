@@ -61,6 +61,13 @@ func New(
 	api.GET("/documents/:documentId/my-permission", documentHandler.MyPermission)
 	api.GET("/documents/:documentId/body", documentHandler.GetBody)
 	api.PUT("/documents/:documentId/body", documentHandler.PutBody)
+	api.GET("/documents/:documentId/spreadsheets/:blockId", documentHandler.GetSpreadsheetBlock)
+	api.PATCH("/documents/:documentId/spreadsheets/:blockId", documentHandler.UpdateSpreadsheetBlock)
+	api.POST("/documents/:documentId/spreadsheets/:blockId/records", documentHandler.CreateSpreadsheetRecord)
+	api.PATCH("/documents/:documentId/spreadsheets/:blockId/cell", documentHandler.UpdateSpreadsheetCell)
+	api.GET("/documents/:documentId/spreadsheets/:blockId/body", documentHandler.GetSpreadsheetBody)
+	api.PUT("/documents/:documentId/spreadsheets/:blockId/body", documentHandler.PutSpreadsheetBody)
+	api.GET("/documents/:documentId/spreadsheets/:blockId/export", documentHandler.ExportSpreadsheetBlock)
 
 	// 管理员后台：需 JWT + AdminOnly
 	adminGroup := api.Group("/admin")

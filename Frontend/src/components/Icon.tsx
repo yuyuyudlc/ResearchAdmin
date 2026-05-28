@@ -19,6 +19,13 @@ export type IconName =
   | 'discussion'
   | 'check'
   | 'locate'
+  | 'table'
+  | 'filter'
+  | 'download'
+  | 'edit'
+  | 'drag'
+  | 'sort'
+  | 'close'
 
 const ICON_MAP: Record<IconName, string> = {
   home: 'solar:home-2-linear',
@@ -38,6 +45,13 @@ const ICON_MAP: Record<IconName, string> = {
   discussion: 'solar:chat-square-like-linear',
   check: 'solar:check-circle-linear',
   locate: 'solar:map-point-wave-linear',
+  table: 'mdi:table',
+  filter: 'mdi:filter-outline',
+  download: 'mdi:download',
+  edit: 'mdi:pencil-outline',
+  drag: 'mdi:drag',
+  sort: 'mdi:sort-variant',
+  close: 'mdi:close',
 }
 
 interface Props {

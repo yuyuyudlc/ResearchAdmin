@@ -23,6 +23,7 @@ func newTestAuthService(t *testing.T) (*AuthService, *DocumentService, *gorm.DB)
 		repository.NewDocACLRepository(db),
 		userRepo,
 		repository.NewDocumentBodyRepository(db),
+		repository.NewSpreadsheetBlockRepository(db),
 	)
 	tokenManager := auth.NewTokenManager("test-secret", 3600*time.Second)
 	authSvc := NewAuthService(userRepo, tokenManager, docSvc)
@@ -686,7 +687,7 @@ func TestFullUserJourney(t *testing.T) {
 	t.Log("Step 8: 设置 ACL 分享给外部用户")
 	external := createTestUser(t, db, "zhaoliu-external@example.com")
 	_, err = docSvc.CreateACL(ctx, CreateACLRequest{
-		UserID:        userID, DocumentID: root.ID,
+		UserID: userID, DocumentID: root.ID,
 		SubjectType:   domain.ACLSubjectTypeUser,
 		SubjectID:     &external.ID,
 		PermissionBit: domain.PermissionRead,
@@ -816,4 +817,3 @@ func TestSearchUsers(t *testing.T) {
 		t.Fatalf("Expected empty results for empty query, got %d", len(res))
 	}
 }
-

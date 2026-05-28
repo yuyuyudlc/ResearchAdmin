@@ -23,6 +23,7 @@ type DocumentService struct {
 	docACLRepo          domain.DocACLRepository
 	userRepo            domain.UserRepository
 	bodyRepo            domain.DocumentBodyRepository
+	spreadsheetRepo     domain.SpreadsheetBlockRepository
 }
 
 func NewDocumentService(
@@ -32,6 +33,7 @@ func NewDocumentService(
 	docACLRepo domain.DocACLRepository,
 	userRepo domain.UserRepository,
 	bodyRepo domain.DocumentBodyRepository,
+	spreadsheetRepo domain.SpreadsheetBlockRepository,
 ) *DocumentService {
 	return &DocumentService{
 		workspaceRepo:       workspaceRepo,
@@ -40,5 +42,6 @@ func NewDocumentService(
 		docACLRepo:          docACLRepo,
 		userRepo:            userRepo,
 		bodyRepo:            bodyRepo,
+		spreadsheetRepo:     spreadsheetRepo,
 	}
 }

@@ -25,7 +25,7 @@ import {
 } from './hooks/useDocumentEditor'
 import ACLModal from './components/ACLModal'
 import CommentSelectionBubble from './components/CommentSelectionBubble'
-import DiscussionSidebar from './components/DiscussionSidebar'
+import DocumentSidebar from './components/DocumentSidebar'
 import { PdfViewer, WordEditor, ExcelEditor, PptxViewer, AudioViewer, VideoViewer, DatasetViewer } from './file-viewers'
 import Icon from '../../components/Icon'
 import { documentService } from '../../services'
@@ -70,6 +70,9 @@ export default function DocumentEditorPage() {
     collaborators,
     providerStatus,
     canEditDocument,
+    activeSpreadsheet,
+    spreadsheetLoading,
+    spreadsheetError,
     fetchDocument,
     saveBody,
     saveFileBody,
@@ -86,6 +89,10 @@ export default function DocumentEditorPage() {
     restoreDocument,
     moveDocument,
     downloadDocument,
+    insertSpreadsheetBlock,
+    updateSpreadsheetBlock,
+    refreshActiveSpreadsheet,
+    exportActiveSpreadsheet,
     handleBack,
   } = useDocumentEditor()
 
@@ -295,8 +302,8 @@ export default function DocumentEditorPage() {
     }
   }
 
-  const renderDiscussionSidebar = () => (
-    <DiscussionSidebar
+  const renderDocumentSidebar = () => (
+    <DocumentSidebar
       threads={threads}
       activeThreadId={activeThreadId}
       collaborators={collaborators}
@@ -309,6 +316,13 @@ export default function DocumentEditorPage() {
       onReply={handleReplyThread}
       onToggleThreadStatus={handleToggleThreadStatus}
       onRelocateThread={handleRelocateThread}
+      spreadsheet={activeSpreadsheet}
+      spreadsheetLoading={spreadsheetLoading}
+      spreadsheetError={spreadsheetError}
+      onInsertSpreadsheetBlock={insertSpreadsheetBlock}
+      onPatchSpreadsheetBlock={updateSpreadsheetBlock}
+      onRefreshSpreadsheet={refreshActiveSpreadsheet}
+      onExportSpreadsheet={exportActiveSpreadsheet}
     />
   )
 
@@ -454,6 +468,15 @@ export default function DocumentEditorPage() {
               保存
             </Button>
           )}
+          {isRichText && (
+            <Button
+              icon={<Icon name="table" size={14} />}
+              onClick={insertSpreadsheetBlock}
+              disabled={!canEditDocument}
+            >
+              插入多维表格
+            </Button>
+          )}
           <Button
             icon={<Icon name="discussion" size={14} />}
             onClick={() => setDiscussionOpen(true)}
@@ -501,20 +524,20 @@ export default function DocumentEditorPage() {
 
             {isDesktopDiscussion && (
               <div className={styles.sidebarColumn}>
-                {renderDiscussionSidebar()}
+                {renderDocumentSidebar()}
               </div>
             )}
           </div>
 
           {!isDesktopDiscussion && (
             <Drawer
-              title="协同讨论"
+              title="文档侧栏"
               placement="right"
               open={discussionOpen}
               onClose={() => setDiscussionOpen(false)}
               size="large"
             >
-              {renderDiscussionSidebar()}
+              {renderDocumentSidebar()}
             </Drawer>
           )}
         </>
