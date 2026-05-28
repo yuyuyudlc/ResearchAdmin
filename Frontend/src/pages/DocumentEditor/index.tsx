@@ -3,6 +3,7 @@ import { EditorContent } from '@tiptap/react'
 import {
   Alert,
   App,
+  Avatar,
   Button,
   Drawer,
   Form,
@@ -10,6 +11,7 @@ import {
   Input,
   InputNumber,
   Modal,
+  Popover,
   Result,
   Space,
   Spin,
@@ -314,6 +316,32 @@ export default function DocumentEditorPage() {
   const isRichText = document?.docType === 'rich_text'
   const isFile = document?.docType === 'file'
   const hasViewer = isFile && bodyType && bodyType !== 'yjs_state'
+  const onlineUserContent = (
+    <div className={styles.onlinePopover}>
+      {collaborators.length === 0 ? (
+        <Text type="secondary">暂无在线协作者</Text>
+      ) : (
+        <Space direction="vertical" size={4}>
+          {collaborators.map((collaborator) => (
+            <span key={collaborator.clientId} className={styles.onlineUser}>
+              <Avatar
+                size={20}
+                src={collaborator.avatarUrl}
+                className={styles.onlineAvatar}
+                style={{ backgroundColor: collaborator.color }}
+              >
+                {collaborator.name.trim().slice(0, 1).toUpperCase()}
+              </Avatar>
+              <span>
+                {collaborator.name}
+                {collaborator.isCurrentUser ? ' (你)' : ''}
+              </span>
+            </span>
+          ))}
+        </Space>
+      )}
+    </div>
+  )
 
   const renderFileViewer = () => {
     if (bodyLoading) {
@@ -403,7 +431,11 @@ export default function DocumentEditorPage() {
           <Space size={8} wrap>
             <Tag>{isRichText ? '富文本' : bodyType ? bodyType.toUpperCase() : document?.docType || '文档'}</Tag>
             {isArchived && <Tag color="orange">已归档</Tag>}
-            {providerStatus === 'connected' && isRichText && <Tag color="blue">协同在线</Tag>}
+            {providerStatus === 'connected' && isRichText && (
+              <Popover content={onlineUserContent} title="在线成员" placement="bottomLeft">
+                <Tag color="blue">在线 {collaborators.length} 人</Tag>
+              </Popover>
+            )}
             {lastSaved && (
               <Text type="secondary">上次保存: {lastSaved.toLocaleTimeString()}</Text>
             )}
