@@ -26,6 +26,7 @@ import {
 import ACLModal from './components/ACLModal'
 import CommentSelectionBubble from './components/CommentSelectionBubble'
 import DocumentSidebar from './components/DocumentSidebar'
+import TiptapToolbar from './components/TiptapWangToolbar'
 import { PdfViewer, WordEditor, ExcelEditor, PptxViewer, AudioViewer, VideoViewer, DatasetViewer } from './file-viewers'
 import Icon from '../../components/Icon'
 import { documentService } from '../../services'
@@ -512,6 +513,9 @@ export default function DocumentEditorPage() {
           <div className={styles.contentShell}>
             <div className={styles.editorColumn}>
               <div className={styles.editorShell}>
+                <div className="tiptap-toolbar-wrapper">
+                  <TiptapToolbar editor={editor} disabled={!canEditDocument} />
+                </div>
                 <EditorContent editor={editor} />
                 <CommentSelectionBubble
                   selection={pendingSelection}

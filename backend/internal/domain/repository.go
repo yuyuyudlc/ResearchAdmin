@@ -40,9 +40,32 @@ type DocumentRepository interface {
 	Create(ctx context.Context, doc *Document) error
 	GetByID(ctx context.Context, id string) (*Document, error)
 	Update(ctx context.Context, id string, updates map[string]any) error
+	ListOwnedByUser(ctx context.Context, userID string, limit int) ([]Document, error)
 	ListChildren(ctx context.Context, workspaceID string, parentID *string, status DocumentStatus, limit int) ([]Document, error)
 	HasChildren(ctx context.Context, documentID string) (bool, error)
 	NextSortOrder(ctx context.Context, workspaceID string, parentID *string) (int, error)
+}
+
+type DocumentAccessRepository interface {
+	Touch(ctx context.Context, userID, documentID string) error
+	ListRecentByUser(ctx context.Context, userID string, limit int) ([]RecentDocument, error)
+}
+
+type DocumentFavoriteRepository interface {
+	Add(ctx context.Context, userID, documentID string) error
+	Delete(ctx context.Context, userID, documentID string) error
+	Exists(ctx context.Context, userID, documentID string) (bool, error)
+	ListByUser(ctx context.Context, userID string, limit int) ([]FavoriteDocument, error)
+}
+
+type RecentDocument struct {
+	Document
+	OpenedAt time.Time
+}
+
+type FavoriteDocument struct {
+	Document
+	FavoritedAt time.Time
 }
 
 type DocumentBodyRepository interface {

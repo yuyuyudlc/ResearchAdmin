@@ -20,6 +20,8 @@ func newTestAuthService(t *testing.T) (*AuthService, *DocumentService, *gorm.DB)
 		repository.NewWorkspaceRepository(db),
 		repository.NewWorkspaceMemberRepository(db),
 		repository.NewDocumentRepository(db),
+		repository.NewDocumentAccessRepository(db),
+		repository.NewDocumentFavoriteRepository(db),
 		repository.NewDocACLRepository(db),
 		userRepo,
 		repository.NewDocumentBodyRepository(db),
@@ -716,6 +718,117 @@ func TestFullUserJourney(t *testing.T) {
 	}
 
 	t.Log("全部流程通过 √")
+}
+
+func TestListHomeDocuments(t *testing.T) {
+	ctx := context.Background()
+	_, docSvc, db := newTestAuthService(t)
+
+	owner := createTestUser(t, db, "home-owner@example.com")
+	viewer := createTestUser(t, db, "home-viewer@example.com")
+	ws, err := docSvc.CreateWorkspace(ctx, CreateWorkspaceRequest{
+		UserID: owner.ID,
+		Name:   "首页列表空间",
+	})
+	if err != nil {
+		t.Fatalf("CreateWorkspace() error = %v", err)
+	}
+	doc, err := docSvc.CreateDocument(ctx, CreateDocumentRequest{
+		UserID:      owner.ID,
+		WorkspaceID: ws.ID,
+		Title:       "我创建的文档",
+	})
+	if err != nil {
+		t.Fatalf("CreateDocument() error = %v", err)
+	}
+	_, err = docSvc.AddMember(ctx, UpsertWorkspaceMemberRequest{
+		OperatorUserID: owner.ID,
+		WorkspaceID:    ws.ID,
+		UserID:         viewer.ID,
+		Role:           domain.WorkspaceMemberRoleMember,
+	})
+	if err != nil {
+		t.Fatalf("AddMember() error = %v", err)
+	}
+
+	mine, err := docSvc.ListHomeDocuments(ctx, HomeDocumentListRequest{
+		UserID: owner.ID,
+		Scope:  "mine",
+	})
+	if err != nil {
+		t.Fatalf("ListHomeDocuments(mine) error = %v", err)
+	}
+	if len(mine.Items) != 1 || mine.Items[0].ID != doc.ID {
+		t.Fatalf("mine items = %+v, want document %s", mine.Items, doc.ID)
+	}
+
+	recent, err := docSvc.ListHomeDocuments(ctx, HomeDocumentListRequest{
+		UserID: viewer.ID,
+		Scope:  "recent",
+	})
+	if err != nil {
+		t.Fatalf("ListHomeDocuments(recent empty) error = %v", err)
+	}
+	if len(recent.Items) != 0 {
+		t.Fatalf("recent before open = %d, want 0", len(recent.Items))
+	}
+
+	if _, err := docSvc.GetDocumentDetail(ctx, viewer.ID, doc.ID); err != nil {
+		t.Fatalf("GetDocumentDetail(viewer) error = %v", err)
+	}
+	recent, err = docSvc.ListHomeDocuments(ctx, HomeDocumentListRequest{
+		UserID: viewer.ID,
+		Scope:  "recent",
+	})
+	if err != nil {
+		t.Fatalf("ListHomeDocuments(recent) error = %v", err)
+	}
+	if len(recent.Items) != 1 || recent.Items[0].ID != doc.ID {
+		t.Fatalf("recent items = %+v, want document %s", recent.Items, doc.ID)
+	}
+	if recent.Items[0].OpenedAt == nil {
+		t.Fatal("recent item should include openedAt")
+	}
+
+	favorite, err := docSvc.ListHomeDocuments(ctx, HomeDocumentListRequest{
+		UserID: viewer.ID,
+		Scope:  "favorite",
+	})
+	if err != nil {
+		t.Fatalf("ListHomeDocuments(favorite empty) error = %v", err)
+	}
+	if len(favorite.Items) != 0 {
+		t.Fatalf("favorite before add = %d, want 0", len(favorite.Items))
+	}
+	if _, err := docSvc.FavoriteDocument(ctx, viewer.ID, doc.ID); err != nil {
+		t.Fatalf("FavoriteDocument() error = %v", err)
+	}
+	favorite, err = docSvc.ListHomeDocuments(ctx, HomeDocumentListRequest{
+		UserID: viewer.ID,
+		Scope:  "favorite",
+	})
+	if err != nil {
+		t.Fatalf("ListHomeDocuments(favorite) error = %v", err)
+	}
+	if len(favorite.Items) != 1 || favorite.Items[0].ID != doc.ID {
+		t.Fatalf("favorite items = %+v, want document %s", favorite.Items, doc.ID)
+	}
+	if !favorite.Items[0].Favorited || favorite.Items[0].FavoritedAt == nil {
+		t.Fatal("favorite item should include favorited state and favoritedAt")
+	}
+	if err := docSvc.UnfavoriteDocument(ctx, viewer.ID, doc.ID); err != nil {
+		t.Fatalf("UnfavoriteDocument() error = %v", err)
+	}
+	favorite, err = docSvc.ListHomeDocuments(ctx, HomeDocumentListRequest{
+		UserID: viewer.ID,
+		Scope:  "favorite",
+	})
+	if err != nil {
+		t.Fatalf("ListHomeDocuments(favorite after delete) error = %v", err)
+	}
+	if len(favorite.Items) != 0 {
+		t.Fatalf("favorite after delete = %d, want 0", len(favorite.Items))
+	}
 }
 
 func TestSearchUsers(t *testing.T) {

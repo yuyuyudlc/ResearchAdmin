@@ -118,13 +118,18 @@ definitions:
   handler.createACLRequest:
     properties:
       inherit:
+        example: true
         type: boolean
       permissionBit:
+        example: 3
         type: integer
       subjectId:
+        example: 00000000-0000-0000-0000-000000000000
         type: string
       subjectType:
-        $ref: '#/definitions/domain.ACLSubjectType'
+        allOf:
+        - $ref: '#/definitions/domain.ACLSubjectType'
+        example: user
     required:
     - permissionBit
     - subjectType
@@ -132,14 +137,20 @@ definitions:
   handler.createDocumentRequest:
     properties:
       docType:
-        $ref: '#/definitions/domain.DocumentType'
+        allOf:
+        - $ref: '#/definitions/domain.DocumentType'
+        example: rich_text
       parentId:
+        example: ""
         type: string
       sourceStorageKey:
+        example: ""
         type: string
       summary:
+        example: ""
         type: string
       title:
+        example: 需求文档
         type: string
     required:
     - title
@@ -147,8 +158,10 @@ definitions:
   handler.createWorkspaceRequest:
     properties:
       description:
+        example: 项目资料
         type: string
       name:
+        example: 研发空间
         type: string
     required:
     - name
@@ -156,8 +169,11 @@ definitions:
   handler.memberRequest:
     properties:
       role:
-        $ref: '#/definitions/domain.WorkspaceMemberRole'
+        allOf:
+        - $ref: '#/definitions/domain.WorkspaceMemberRole'
+        example: member
       userId:
+        example: 00000000-0000-0000-0000-000000000000
         type: string
     required:
     - role
@@ -166,30 +182,39 @@ definitions:
   handler.moveDocumentRequest:
     properties:
       parentId:
+        example: ""
         type: string
       sortOrder:
+        example: 1000
         type: integer
     type: object
   handler.updateACLRequest:
     properties:
       inherit:
+        example: true
         type: boolean
       permissionBit:
+        example: 1
         type: integer
     type: object
   handler.updateDocumentRequest:
     properties:
       sourceStorageKey:
+        example: ""
         type: string
       summary:
+        example: ""
         type: string
       title:
+        example: 需求文档
         type: string
     type: object
   handler.updateMemberRequest:
     properties:
       role:
-        $ref: '#/definitions/domain.WorkspaceMemberRole'
+        allOf:
+        - $ref: '#/definitions/domain.WorkspaceMemberRole'
+        example: member
     required:
     - role
     type: object
@@ -208,6 +233,31 @@ definitions:
         type: integer
       data: {}
       message:
+        type: string
+    type: object
+  service.UserResponse:
+    properties:
+      avatarUrl:
+        type: string
+      displayName:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      organization:
+        type: string
+      organizationId:
+        type: string
+      professionalTitle:
+        $ref: '#/definitions/domain.ProfessionalTitle'
+      signature:
+        type: string
+      status:
+        type: string
+      supervisor:
+        type: string
+      username:
         type: string
     type: object
 info:
@@ -650,6 +700,87 @@ paths:
       summary: 归档文档
       tags:
       - documents
+  /documents/{documentId}/body:
+    get:
+      description: 返回文档的 yjs 状态或文件二进制数据。
+      parameters:
+      - description: 文档 ID
+        in: path
+        name: documentId
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 获取文档正文
+      tags:
+      - documents
+    put:
+      consumes:
+      - application/octet-stream
+      description: 上传文档正文（yjs 二进制状态 或 文件）。权限：EDIT。
+      parameters:
+      - description: 文档 ID
+        in: path
+        name: documentId
+        required: true
+        type: string
+      - description: 正文类型（yjs_state/pdf/word/video）
+        in: header
+        name: X-Body-Type
+        type: string
+      - description: 正文二进制
+        in: body
+        name: request
+        required: true
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 更新文档正文
+      tags:
+      - documents
   /documents/{documentId}/download:
     get:
       description: 返回文件型文档的存储引用。
@@ -685,6 +816,71 @@ paths:
       security:
       - BearerAuth: []
       summary: 下载文件型文档
+      tags:
+      - documents
+  /documents/{documentId}/favorite:
+    delete:
+      description: 当前用户取消收藏指定文档。要求当前用户至少拥有该文档 READ 权限。
+      parameters:
+      - description: 文档 ID
+        in: path
+        name: documentId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 取消收藏文档
+      tags:
+      - documents
+    post:
+      description: 当前用户收藏指定文档。要求当前用户至少拥有该文档 READ 权限，重复收藏保持幂等。
+      parameters:
+      - description: 文档 ID
+        in: path
+        name: documentId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 收藏文档
       tags:
       - documents
   /documents/{documentId}/move:
@@ -794,6 +990,78 @@ paths:
       summary: 恢复文档
       tags:
       - documents
+  /documents/home:
+    get:
+      description: 按 scope 返回当前用户的首页文档列表。scope=mine 返回我创建的，scope=recent 返回最近打开，scope=favorite
+        返回我收藏的。
+      parameters:
+      - description: 列表范围：mine/recent/favorite
+        in: query
+        name: scope
+        required: true
+        type: string
+      - description: 返回数量，默认 20，最大 50
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 获取首页文档列表
+      tags:
+      - documents
+  /users/search:
+    get:
+      consumes:
+      - application/json
+      description: 根据用户名、邮箱或显示名称模糊搜索非禁用的用户。
+      parameters:
+      - description: 搜索关键字
+        in: query
+        name: q
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/service.UserResponse'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Body'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: 模糊搜索用户
+      tags:
+      - auth
   /workspaces:
     get:
       description: 返回当前登录用户加入的 workspace 列表。

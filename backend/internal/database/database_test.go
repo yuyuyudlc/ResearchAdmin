@@ -1,16 +1,13 @@
 package database
 
 import (
-	"path/filepath"
 	"testing"
 
 	"research/internal/domain"
 )
 
 func TestOpenAutoMigratesUUIDTables(t *testing.T) {
-	dbPath := filepath.Join(t.TempDir(), "test.db")
-
-	db, err := Open(dbPath)
+	db, err := Open("file::memory:?cache=shared")
 	if err != nil {
 		t.Fatalf("Open() error = %v", err)
 	}

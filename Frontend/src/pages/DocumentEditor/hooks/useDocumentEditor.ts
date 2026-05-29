@@ -10,6 +10,20 @@ import { useNavigate, useParams } from "react-router-dom";
 import Collaboration from "@tiptap/extension-collaboration";
 import CollaborationCaret from "@tiptap/extension-collaboration-caret";
 import StarterKit from "@tiptap/starter-kit";
+import Underline from "@tiptap/extension-underline";
+import Superscript from "@tiptap/extension-superscript";
+import Subscript from "@tiptap/extension-subscript";
+import Highlight from "@tiptap/extension-highlight";
+import Link from "@tiptap/extension-link";
+import TaskList from "@tiptap/extension-task-list";
+import TaskItem from "@tiptap/extension-task-item";
+import { TextStyle } from "@tiptap/extension-text-style";
+import Color from "@tiptap/extension-color";
+import TextAlign from "@tiptap/extension-text-align";
+import { Table } from "@tiptap/extension-table";
+import TableRow from "@tiptap/extension-table-row";
+import TableCell from "@tiptap/extension-table-cell";
+import TableHeader from "@tiptap/extension-table-header";
 import { useEditor } from "@tiptap/react";
 import { WebsocketProvider } from "y-websocket";
 import * as Y from "yjs";
@@ -106,16 +120,45 @@ export function useDocumentEditor() {
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [activeSpreadsheet, setActiveSpreadsheet] =
     useState<SpreadsheetBlockState | null>(null);
-  const [activeSpreadsheetRecords, setActiveSpreadsheetRecords] =
-    useState<SpreadsheetRecord[]>([]);
+  const [activeSpreadsheetRecords, setActiveSpreadsheetRecords] = useState<
+    SpreadsheetRecord[]
+  >([]);
   const [spreadsheetLoading, setSpreadsheetLoading] = useState(false);
   const [spreadsheetError, setSpreadsheetError] = useState<string | null>(null);
 
   const extensions = useMemo(() => {
-    const list: any[] = [
+    const list: ReturnType<typeof useEditor>['extensionManager']['extensions'] = [
       StarterKit.configure({
         undoRedo: false,
       }),
+      Underline,
+      Superscript,
+      Subscript,
+      Highlight.configure({
+        multicolor: true,
+      }),
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+          rel: "noopener noreferrer",
+          target: "_blank",
+        },
+      }),
+      TaskList,
+      TaskItem.configure({
+        nested: true,
+      }),
+      TextStyle,
+      Color,
+      TextAlign.configure({
+        types: ["heading", "paragraph"],
+      }),
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableCell,
+      TableHeader,
       CommentThreadMark,
       SpreadsheetBlockExtension,
       Collaboration.configure({
@@ -176,7 +219,10 @@ export function useDocumentEditor() {
       const transaction = editor.state.tr;
 
       editor.state.doc.descendants((node, position) => {
-        if (node.type.name === 'spreadsheetBlock' && node.attrs.blockId === blockId) {
+        if (
+          node.type.name === "spreadsheetBlock" &&
+          node.attrs.blockId === blockId
+        ) {
           transaction.setNodeMarkup(position, undefined, {
             ...node.attrs,
             ...patch,
@@ -206,7 +252,10 @@ export function useDocumentEditor() {
       setSpreadsheetError(null);
 
       try {
-        const res = await spreadsheetService.getBlock(documentId, spreadsheetBlock.blockId);
+        const res = await spreadsheetService.getBlock(
+          documentId,
+          spreadsheetBlock.blockId,
+        );
         const nextSpreadsheet: SpreadsheetBlockState = {
           ...spreadsheetBlock,
           title: res.data.title || spreadsheetBlock.title,
@@ -225,7 +274,9 @@ export function useDocumentEditor() {
         patchSpreadsheetNode(spreadsheetBlock.blockId, nextSpreadsheet);
       } catch (err) {
         startTransition(() => {
-          setSpreadsheetError(err instanceof Error ? err.message : '加载多维表格失败');
+          setSpreadsheetError(
+            err instanceof Error ? err.message : "加载多维表格失败",
+          );
         });
       } finally {
         startTransition(() => {
@@ -236,19 +287,25 @@ export function useDocumentEditor() {
     [documentId, patchSpreadsheetNode],
   );
 
-  const readSelectedSpreadsheet = useCallback((): SpreadsheetBlockState | null => {
-    const currentEditor = editorRef.current;
-    if (!currentEditor) {
-      return null;
-    }
+  const readSelectedSpreadsheet =
+    useCallback((): SpreadsheetBlockState | null => {
+      const currentEditor = editorRef.current;
+      if (!currentEditor) {
+        return null;
+      }
 
-    const selection = currentEditor.state.selection as { node?: { type?: { name?: string }; attrs?: SpreadsheetBlockState } };
-    if (selection.node?.type?.name !== 'spreadsheetBlock' || !selection.node.attrs) {
-      return null;
-    }
+      const selection = currentEditor.state.selection as {
+        node?: { type?: { name?: string }; attrs?: SpreadsheetBlockState };
+      };
+      if (
+        selection.node?.type?.name !== "spreadsheetBlock" ||
+        !selection.node.attrs
+      ) {
+        return null;
+      }
 
-    return selection.node.attrs;
-  }, []);
+      return selection.node.attrs;
+    }, []);
 
   useEffect(() => {
     if (!editor) {
@@ -273,10 +330,10 @@ export function useDocumentEditor() {
     };
 
     syncSpreadsheetSelection();
-    editor.on('selectionUpdate', syncSpreadsheetSelection);
+    editor.on("selectionUpdate", syncSpreadsheetSelection);
 
     return () => {
-      editor.off('selectionUpdate', syncSpreadsheetSelection);
+      editor.off("selectionUpdate", syncSpreadsheetSelection);
     };
   }, [editor, readSelectedSpreadsheet, refreshSpreadsheet]);
 
@@ -288,7 +345,10 @@ export function useDocumentEditor() {
         records: SpreadsheetRecord[];
       }>;
 
-      if (!customEvent.detail?.blockId || customEvent.detail.blockId !== activeSpreadsheet?.blockId) {
+      if (
+        !customEvent.detail?.blockId ||
+        customEvent.detail.blockId !== activeSpreadsheet?.blockId
+      ) {
         return;
       }
 
@@ -298,10 +358,16 @@ export function useDocumentEditor() {
       });
     };
 
-    window.addEventListener('research-admin-spreadsheet-updated', handleSpreadsheetUpdate);
+    window.addEventListener(
+      "research-admin-spreadsheet-updated",
+      handleSpreadsheetUpdate,
+    );
 
     return () => {
-      window.removeEventListener('research-admin-spreadsheet-updated', handleSpreadsheetUpdate);
+      window.removeEventListener(
+        "research-admin-spreadsheet-updated",
+        handleSpreadsheetUpdate,
+      );
     };
   }, [activeSpreadsheet?.blockId]);
 
@@ -809,7 +875,11 @@ export function useDocumentEditor() {
       patchSpreadsheetNode(activeSpreadsheet.blockId, patch);
 
       if (documentId) {
-        await spreadsheetService.updateView(documentId, activeSpreadsheet.blockId, patch);
+        await spreadsheetService.updateView(
+          documentId,
+          activeSpreadsheet.blockId,
+          patch,
+        );
       }
     },
     [activeSpreadsheet, documentId, patchSpreadsheetNode],

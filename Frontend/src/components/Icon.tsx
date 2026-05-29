@@ -26,6 +26,32 @@ export type IconName =
   | 'drag'
   | 'sort'
   | 'close'
+  | 'bold'
+  | 'italic'
+  | 'strike'
+  | 'code'
+  | 'blockquote'
+  | 'list-ul'
+  | 'list-ol'
+  | 'hr'
+  | 'undo'
+  | 'redo'
+  | 'heading'
+  | 'paragraph'
+  | 'underline'
+  | 'highlight'
+  | 'link'
+  | 'superscript'
+  | 'subscript'
+  | 'align-left'
+  | 'align-center'
+  | 'align-right'
+  | 'align-justify'
+  | 'indent'
+  | 'outdent'
+  | 'task'
+  | 'text-color'
+  | 'table-insert'
 
 const ICON_MAP: Record<IconName, string> = {
   home: 'solar:home-2-linear',
@@ -52,6 +78,32 @@ const ICON_MAP: Record<IconName, string> = {
   drag: 'mdi:drag',
   sort: 'mdi:sort-variant',
   close: 'mdi:close',
+  bold: 'mdi:format-bold',
+  italic: 'mdi:format-italic',
+  strike: 'mdi:format-strikethrough-variant',
+  code: 'mdi:code-tags',
+  blockquote: 'mdi:format-quote-open',
+  'list-ul': 'mdi:format-list-bulleted',
+  'list-ol': 'mdi:format-list-numbered',
+  hr: 'mdi:minus',
+  undo: 'mdi:undo',
+  redo: 'mdi:redo',
+  heading: 'mdi:format-header-1',
+  paragraph: 'mdi:format-paragraph',
+  underline: 'mdi:format-underline',
+  highlight: 'mdi:format-color-highlight',
+  link: 'mdi:link-variant',
+  superscript: 'mdi:format-superscript',
+  subscript: 'mdi:format-subscript',
+  'align-left': 'mdi:format-align-left',
+  'align-center': 'mdi:format-align-center',
+  'align-right': 'mdi:format-align-right',
+  'align-justify': 'mdi:format-align-justify',
+  indent: 'mdi:format-indent-increase',
+  outdent: 'mdi:format-indent-decrease',
+  task: 'mdi:format-list-checks',
+  'text-color': 'mdi:format-color-text',
+  'table-insert': 'mdi:table-plus',
 }
 
 interface Props {
