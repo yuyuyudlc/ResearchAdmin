@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Button,
@@ -12,7 +12,8 @@ import {
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { workspaceService } from '../../services/workspace'
-import type { Workspace } from '../../services/types'
+import { documentService } from '../../services/document'
+import type { Workspace, HomeDocumentItem } from '../../services/types'
 import Icon, { type IconName } from '../../components/Icon'
 import styles from './style.module.css'
 
@@ -21,129 +22,125 @@ const { Title, Text } = Typography
 interface FeedItem {
   id: string
   title: string
-  type: 'doc' | 'sheet' | 'folder'
-  sender: string
-  receivedAt: string
-  unread?: boolean
+  type: string
+  time: string
   tag?: string
 }
 
-const ICON_BY_TYPE: Record<FeedItem['type'], IconName> = {
-  doc: 'file',
-  sheet: 'file',
-  folder: 'folder',
+const DOC_TYPE_CONFIG: Record<string, { icon: IconName; color: string; label: string }> = {
+  rich_text: { icon: 'file', color: '#1677ff', label: '富文本' },
+  sheet: { icon: 'file', color: '#52c41a', label: '电子表格' },
+  folder: { icon: 'folder', color: '#faad14', label: '文件夹' },
+  file: { icon: 'file', color: '#1677ff', label: '文件' },
+  doc: { icon: 'file', color: '#1677ff', label: '文档' },
 }
 
-const ICON_COLOR_BY_TYPE: Record<FeedItem['type'], string> = {
-  doc: '#1677ff',
-  sheet: '#52c41a',
-  folder: '#faad14',
+function formatTime(iso: string): string {
+  const d = new Date(iso)
+  const now = new Date()
+  const diff = now.getTime() - d.getTime()
+  if (diff < 0) return iso
+  const minutes = Math.floor(diff / 60000)
+  if (minutes < 1) return '刚刚'
+  if (minutes < 60) return `${minutes}分钟前`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}小时前`
+  const days = Math.floor(hours / 24)
+  if (days < 30) return `${days}天前`
+  return `${d.getMonth() + 1}月${d.getDate()}日`
 }
 
-function makeMock(count: number, prefix: string): FeedItem[] {
-  const senders = ['苏志华', '贺永琪', '赵秀杰', '魏国富', '宋萌', '王佑佑', '郎丽丽', '胡鹤伟']
-  const titles = [
-    'TRD-价格流水日志变更',
-    '如何申请商家中心子应用？',
-    '【禁止外传】别人都想要你的钱，但我关心你的身体~京造…',
-    '2026-0518至0522上线checklist',
-    '2026-0511至0515上线',
-    'js治理',
-    '商品平台化-商品渲染线上灰度放量跟进',
-    '"开箱"展亭落地北京职场 【动手工坊】开启招募！',
-    '商品发品的错误码信息',
-    '2026-H1',
-    '618新品手机特惠',
-    '宠物节内购福利拉满，品类新享抄底价',
-  ]
-  const today = new Date()
-  return Array.from({ length: count }).map((_, i) => {
-    const d = new Date(today.getTime() - i * 6 * 3600 * 1000)
-    const dayDiff = Math.floor((today.getTime() - d.getTime()) / (24 * 3600 * 1000))
-    let receivedAt: string
-    if (dayDiff === 0) {
-      receivedAt = `今天 ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-    } else {
-      receivedAt = `${d.getMonth() + 1}月${d.getDate()}日`
-    }
-    return {
-      id: `${prefix}-${i}`,
-      title: titles[i % titles.length],
-      type: (i % 5 === 0 ? 'sheet' : i % 7 === 0 ? 'folder' : 'doc') as FeedItem['type'],
-      sender: senders[i % senders.length],
-      receivedAt,
-      unread: i < 5,
-      tag: i % 3 === 0 ? '研发' : i % 3 === 1 ? '产品' : undefined,
-    }
-  })
+type TabKey = 'recent' | 'mine' | 'favorite'
+
+const SCOPE_BY_TAB: Record<TabKey, string> = {
+  recent: 'recent',
+  mine: 'mine',
+  favorite: 'favorite',
 }
 
-const RECEIVED = makeMock(20, 'received')
-const RECENT = makeMock(15, 'recent')
-const MINE = makeMock(12, 'mine')
-const SENT = makeMock(10, 'sent')
+const TIME_LABEL: Record<TabKey, string> = {
+  recent: '最近访问',
+  mine: '创建时间',
+  favorite: '收藏时间',
+}
 
 export default function HomePage() {
   const navigate = useNavigate()
-  const [tab, setTab] = useState<'received' | 'recent' | 'mine' | 'sent'>('received')
+  const [tab, setTab] = useState<TabKey>('recent')
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [wsLoading, setWsLoading] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [docItems, setDocItems] = useState<HomeDocumentItem[]>([])
 
   useEffect(() => {
     setWsLoading(true)
     workspaceService
       .list()
-      .then((res) => setWorkspaces(res.data.items))
+      .then((res) => setWorkspaces(res.data.items ?? []))
       .catch(() => setWorkspaces([]))
       .finally(() => setWsLoading(false))
   }, [])
 
-  const dataSource = useMemo(() => {
-    switch (tab) {
-      case 'received': return RECEIVED
-      case 'recent': return RECENT
-      case 'mine': return MINE
-      case 'sent': return SENT
+  const fetchDocuments = useCallback(async (scope: string) => {
+    setLoading(true)
+    try {
+      const res = await documentService.listHomeDocuments(scope)
+      setDocItems(res.data.items ?? [])
+    } catch {
+      setDocItems([])
+    } finally {
+      setLoading(false)
     }
-  }, [tab])
+  }, [])
+
+  useEffect(() => {
+    fetchDocuments(SCOPE_BY_TAB[tab])
+  }, [tab, fetchDocuments])
+
+  const dataSource = useMemo<FeedItem[]>(() => {
+    return docItems.map((item) => {
+      const docType = item.docType || 'doc'
+      const config = DOC_TYPE_CONFIG[docType] ?? DOC_TYPE_CONFIG.doc
+      const timeField = tab === 'recent' ? item.openedAt : tab === 'favorite' ? item.favoritedAt : item.createdAt
+      return {
+        id: item.id,
+        title: item.title,
+        type: docType,
+        time: timeField ? formatTime(timeField) : '未知',
+        tag: config.label,
+      }
+    })
+  }, [tab, docItems])
 
   const columns: ColumnsType<FeedItem> = [
     {
-      title: '所有类型',
+      title: '文档名称',
       dataIndex: 'title',
       key: 'title',
-      render: (_, record) => (
-        <Space>
-          {record.unread && <span className={styles.unreadDot} />}
-          <span className={styles.icon}>
-            <Icon
-              name={ICON_BY_TYPE[record.type]}
-              size={18}
-              color={ICON_COLOR_BY_TYPE[record.type]}
-            />
-          </span>
-          <a className={styles.titleLink}>{record.title}</a>
-        </Space>
-      ),
+      render: (_: unknown, record: FeedItem) => {
+        const config = DOC_TYPE_CONFIG[record.type] ?? DOC_TYPE_CONFIG.doc
+        return (
+          <Space>
+            <span className={styles.icon}>
+              <Icon name={config.icon} size={18} color={config.color} />
+            </span>
+            <a className={styles.titleLink}>{record.title}</a>
+          </Space>
+        )
+      },
     },
     {
-      title: '标签',
+      title: '类型',
       dataIndex: 'tag',
       key: 'tag',
       width: 120,
       render: (tag?: string) => (tag ? <Tag>{tag}</Tag> : <Text type="secondary">-</Text>),
     },
     {
-      title: tab === 'sent' || tab === 'mine' ? '接收人' : '发送人',
-      dataIndex: 'sender',
-      key: 'sender',
-      width: 140,
-    },
-    {
-      title: tab === 'recent' ? '最近访问' : '接收时间',
-      dataIndex: 'receivedAt',
-      key: 'receivedAt',
-      width: 140,
+      title: TIME_LABEL[tab],
+      dataIndex: 'time',
+      key: 'time',
+      width: 160,
       render: (t: string) => <Text type="secondary">{t}</Text>,
     },
   ]
@@ -165,12 +162,11 @@ export default function HomePage() {
 
       <Tabs
         activeKey={tab}
-        onChange={(k) => setTab(k as typeof tab)}
+        onChange={(k) => setTab(k as TabKey)}
         items={[
-          { key: 'received', label: <span>我收到的<Tag color="red" style={{ marginLeft: 6 }}>99+</Tag></span> },
           { key: 'recent', label: '最近打开' },
           { key: 'mine', label: '我创建的' },
-          { key: 'sent', label: '我发送的' },
+          { key: 'favorite', label: '我收藏的' },
         ]}
       />
 
@@ -178,13 +174,13 @@ export default function HomePage() {
         className={styles.table}
         size="middle"
         rowKey="id"
+        loading={loading}
         pagination={{ pageSize: 12, showSizeChanger: false, showTotal: (t) => `共 ${t} 条` }}
         dataSource={dataSource}
         columns={columns}
         onRow={(record) => ({
           onClick: () => {
-            // mock 项无真实 id，演示用：若是真实 id 跳编辑器
-            if (!record.id.includes('-')) navigate(`/documents/${record.id}`)
+            navigate(`/documents/${record.id}`)
           },
         })}
       />

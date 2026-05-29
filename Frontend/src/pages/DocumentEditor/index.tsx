@@ -76,6 +76,7 @@ export default function DocumentEditorPage() {
     collaborators,
     providerStatus,
     canEditDocument,
+    favoriting,
     fetchDocument,
     saveBody,
     saveFileBody,
@@ -91,6 +92,8 @@ export default function DocumentEditorPage() {
     restoreDocument,
     moveDocument,
     downloadDocument,
+    favoriteDocument,
+    unfavoriteDocument,
     handleBack,
   } = useDocumentEditor()
 
@@ -433,6 +436,21 @@ export default function DocumentEditorPage() {
           >
             讨论 {threads.length > 0 ? `(${threads.length})` : ''}
           </Button>
+          {document && (
+            <Button
+              loading={favoriting}
+              icon={<Icon name={document.favorited ? 'star-filled' : 'star'} size={14} color={document.favorited ? '#faad14' : undefined} />}
+              onClick={() => {
+                if (document.favorited) {
+                  unfavoriteDocument().catch((e: Error) => message.error(e.message))
+                } else {
+                  favoriteDocument().catch((e: Error) => message.error(e.message))
+                }
+              }}
+            >
+              {document.favorited ? '取消收藏' : '收藏'}
+            </Button>
+          )}
           <Button onClick={() => setMetaOpen(true)}>文档信息</Button>
           <Button onClick={() => setMoveOpen(true)}>移动</Button>
           <Button disabled={!document || !canManage(document.permissionBit)} onClick={() => setAclOpen(true)}>权限</Button>

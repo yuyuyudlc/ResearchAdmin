@@ -105,6 +105,7 @@ export function useDocumentEditor() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [favoriting, setFavoriting] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [error, setError] = useState("");
   const [threads, setThreads] = useState<CommentThread[]>([]);
@@ -664,6 +665,29 @@ export function useDocumentEditor() {
     return res.data;
   };
 
+  const favoriteDocument = async () => {
+    if (!documentId) return;
+    setFavoriting(true);
+    try {
+      const res = await documentService.favorite(documentId);
+      setDocument((prev) => prev ? { ...prev, favorited: true } : prev);
+      return res.data;
+    } finally {
+      setFavoriting(false);
+    }
+  };
+
+  const unfavoriteDocument = async () => {
+    if (!documentId) return;
+    setFavoriting(true);
+    try {
+      await documentService.unfavorite(documentId);
+      setDocument((prev) => prev ? { ...prev, favorited: false } : prev);
+    } finally {
+      setFavoriting(false);
+    }
+  };
+
   const handleBack = () => {
     if (document?.workspaceId) {
       navigate(`/workspaces/${document.workspaceId}`);
@@ -706,6 +730,9 @@ export function useDocumentEditor() {
     restoreDocument,
     moveDocument,
     downloadDocument,
+    favoriteDocument,
+    unfavoriteDocument,
+    favoriting,
     handleBack,
   };
 }

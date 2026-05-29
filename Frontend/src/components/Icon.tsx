@@ -52,6 +52,8 @@ export type IconName =
   | 'task'
   | 'text-color'
   | 'table-insert'
+  | 'star'
+  | 'star-filled'
 
 const ICON_MAP: Record<IconName, string> = {
   home: 'solar:home-2-linear',
@@ -104,6 +106,8 @@ const ICON_MAP: Record<IconName, string> = {
   task: 'mdi:format-list-checks',
   'text-color': 'mdi:format-color-text',
   'table-insert': 'mdi:table-plus',
+  star: 'mdi:star-outline',
+  'star-filled': 'mdi:star',
 }
 
 interface Props {

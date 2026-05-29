@@ -96,6 +96,17 @@ export interface DocumentNode {
   sourceStorageKey?: string;
   createdAt: string;
   updatedAt: string;
+  favorited?: boolean;
+}
+
+export interface HomeDocumentItem extends DocumentNode {
+  openedAt?: string;
+  favoritedAt?: string;
+  favorited: boolean;
+}
+
+export interface HomeDocumentListResponse {
+  items: HomeDocumentItem[];
 }
 
 export interface WorkspaceMember {

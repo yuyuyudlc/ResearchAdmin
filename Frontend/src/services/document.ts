@@ -1,6 +1,8 @@
 import { get, post, patch, del, getBinary, putBinary } from './api'
 import type {
   DocumentNode,
+  HomeDocumentItem,
+  HomeDocumentListResponse,
   CreateDocumentRequest,
   UpdateDocumentRequest,
   MoveDocumentRequest,
@@ -59,5 +61,19 @@ export const documentService = {
       'Content-Type': 'application/octet-stream',
       'X-Body-Type': bodyType,
     })
+  },
+
+  listHomeDocuments(scope: string, limit?: number) {
+    const params = new URLSearchParams({ scope })
+    if (limit) params.set('limit', String(limit))
+    return get<HomeDocumentListResponse>(`/documents/home?${params.toString()}`)
+  },
+
+  favorite(documentId: string) {
+    return post<HomeDocumentItem>(`/documents/${documentId}/favorite`)
+  },
+
+  unfavorite(documentId: string) {
+    return del<{ message: string }>(`/documents/${documentId}/favorite`)
   },
 }
