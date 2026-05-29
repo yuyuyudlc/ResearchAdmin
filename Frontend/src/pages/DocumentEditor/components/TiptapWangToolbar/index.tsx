@@ -7,6 +7,11 @@ import type { IconName } from '../../../../components/Icon'
 import type { Level } from '@tiptap/extension-heading'
 import styles from './style/index.module.css'
 
+type EditorChainWithIndent = ReturnType<Editor['chain']> & {
+  indent?: () => ReturnType<Editor['chain']>
+  outdent?: () => ReturnType<Editor['chain']>
+}
+
 interface Props {
   editor: Editor | null
   disabled?: boolean
@@ -113,8 +118,16 @@ export default function TiptapToolbar({ editor, disabled }: Props) {
   const toggleBulletList = useCallback(() => editor?.chain().focus().toggleBulletList().run(), [editor])
   const toggleOrderedList = useCallback(() => editor?.chain().focus().toggleOrderedList().run(), [editor])
   const toggleTaskList = useCallback(() => editor?.chain().focus().toggleTaskList().run(), [editor])
-  const indent = useCallback(() => editor?.chain().focus().indent().run(), [editor])
-  const outdent = useCallback(() => editor?.chain().focus().outdent().run(), [editor])
+  const indent = useCallback(() => {
+    const chain = editor?.chain().focus() as EditorChainWithIndent | undefined
+    const nextChain = chain?.indent?.()
+    return nextChain?.run()
+  }, [editor])
+  const outdent = useCallback(() => {
+    const chain = editor?.chain().focus() as EditorChainWithIndent | undefined
+    const nextChain = chain?.outdent?.()
+    return nextChain?.run()
+  }, [editor])
   const setHR = useCallback(() => editor?.chain().focus().setHorizontalRule().run(), [editor])
   const undo = useCallback(() => editor?.chain().focus().undo().run(), [editor])
   const redo = useCallback(() => editor?.chain().focus().redo().run(), [editor])
