@@ -31,15 +31,10 @@ import { useAuth } from "../../../contexts/AuthContext";
 import {
   canEdit as hasEditPermission,
   type DocumentNode,
-  type SpreadsheetBlockState,
-  type SpreadsheetRecord,
 } from "../../../services/types";
 import { documentService } from "../../../services/document";
-import { spreadsheetService } from "../../../services/spreadsheet";
 import { inferBodyType } from "../file-viewers";
 import { CommentThreadMark } from "./commentMark";
-import { SpreadsheetBlockExtension } from "../components/SpreadsheetExtension";
-import { downloadSpreadsheetWorkbook } from "../components/SpreadsheetView";
 import {
   addReplyToThread,
   collectThreadAnchors,
@@ -100,7 +95,6 @@ export function useDocumentEditor() {
   const editorRef = useRef<ReturnType<typeof useEditor> | null>(null);
   const fetchInFlightRef = useRef(false);
   const lastFetchedIdRef = useRef<string | null>(null);
-  const lastSpreadsheetBlockIdRef = useRef<string | null>(null);
   const [provider, setProvider] = useState<WebsocketProvider | null>(null);
   const [providerStatus, setProviderStatus] = useState<
     "connecting" | "connected" | "disconnected"
@@ -118,13 +112,6 @@ export function useDocumentEditor() {
   const [pendingSelection, setPendingSelection] =
     useState<PendingCommentSelection | null>(null);
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
-  const [activeSpreadsheet, setActiveSpreadsheet] =
-    useState<SpreadsheetBlockState | null>(null);
-  const [activeSpreadsheetRecords, setActiveSpreadsheetRecords] = useState<
-    SpreadsheetRecord[]
-  >([]);
-  const [spreadsheetLoading, setSpreadsheetLoading] = useState(false);
-  const [spreadsheetError, setSpreadsheetError] = useState<string | null>(null);
 
   const extensions = useMemo(() => {
     const list: ReturnType<typeof useEditor>['extensionManager']['extensions'] = [
@@ -160,7 +147,6 @@ export function useDocumentEditor() {
       TableCell,
       TableHeader,
       CommentThreadMark,
-      SpreadsheetBlockExtension,
       Collaboration.configure({
         document: ydoc,
       }),
@@ -208,168 +194,6 @@ export function useDocumentEditor() {
   useEffect(() => {
     editorRef.current = editor;
   }, [editor]);
-
-  const patchSpreadsheetNode = useCallback(
-    (blockId: string, patch: Partial<SpreadsheetBlockState>) => {
-      if (!editor) {
-        return false;
-      }
-
-      let updated = false;
-      const transaction = editor.state.tr;
-
-      editor.state.doc.descendants((node, position) => {
-        if (
-          node.type.name === "spreadsheetBlock" &&
-          node.attrs.blockId === blockId
-        ) {
-          transaction.setNodeMarkup(position, undefined, {
-            ...node.attrs,
-            ...patch,
-          });
-          updated = true;
-          return false;
-        }
-        return undefined;
-      });
-
-      if (updated) {
-        editor.view.dispatch(transaction);
-      }
-
-      return updated;
-    },
-    [editor],
-  );
-
-  const refreshSpreadsheet = useCallback(
-    async (spreadsheetBlock: SpreadsheetBlockState) => {
-      if (!documentId) {
-        return;
-      }
-
-      setSpreadsheetLoading(true);
-      setSpreadsheetError(null);
-
-      try {
-        const res = await spreadsheetService.getBlock(
-          documentId,
-          spreadsheetBlock.blockId,
-        );
-        const nextSpreadsheet: SpreadsheetBlockState = {
-          ...spreadsheetBlock,
-          title: res.data.title || spreadsheetBlock.title,
-          mode: res.data.mode || spreadsheetBlock.mode,
-          config: res.data.config || spreadsheetBlock.config,
-          filters: res.data.filters || spreadsheetBlock.filters,
-          sort: res.data.sort || spreadsheetBlock.sort,
-          activeMetric: res.data.activeMetric ?? spreadsheetBlock.activeMetric,
-        };
-
-        startTransition(() => {
-          setActiveSpreadsheet(nextSpreadsheet);
-          setActiveSpreadsheetRecords(res.data.records || []);
-        });
-
-        patchSpreadsheetNode(spreadsheetBlock.blockId, nextSpreadsheet);
-      } catch (err) {
-        startTransition(() => {
-          setSpreadsheetError(
-            err instanceof Error ? err.message : "加载多维表格失败",
-          );
-        });
-      } finally {
-        startTransition(() => {
-          setSpreadsheetLoading(false);
-        });
-      }
-    },
-    [documentId, patchSpreadsheetNode],
-  );
-
-  const readSelectedSpreadsheet =
-    useCallback((): SpreadsheetBlockState | null => {
-      const currentEditor = editorRef.current;
-      if (!currentEditor) {
-        return null;
-      }
-
-      const selection = currentEditor.state.selection as {
-        node?: { type?: { name?: string }; attrs?: SpreadsheetBlockState };
-      };
-      if (
-        selection.node?.type?.name !== "spreadsheetBlock" ||
-        !selection.node.attrs
-      ) {
-        return null;
-      }
-
-      return selection.node.attrs;
-    }, []);
-
-  useEffect(() => {
-    if (!editor) {
-      return;
-    }
-
-    const syncSpreadsheetSelection = () => {
-      const spreadsheetBlock = readSelectedSpreadsheet();
-      startTransition(() => {
-        setActiveSpreadsheet(spreadsheetBlock);
-      });
-
-      if (!spreadsheetBlock) {
-        lastSpreadsheetBlockIdRef.current = null;
-        return;
-      }
-
-      if (spreadsheetBlock.blockId !== lastSpreadsheetBlockIdRef.current) {
-        lastSpreadsheetBlockIdRef.current = spreadsheetBlock.blockId;
-        void refreshSpreadsheet(spreadsheetBlock);
-      }
-    };
-
-    syncSpreadsheetSelection();
-    editor.on("selectionUpdate", syncSpreadsheetSelection);
-
-    return () => {
-      editor.off("selectionUpdate", syncSpreadsheetSelection);
-    };
-  }, [editor, readSelectedSpreadsheet, refreshSpreadsheet]);
-
-  useEffect(() => {
-    const handleSpreadsheetUpdate = (event: Event) => {
-      const customEvent = event as CustomEvent<{
-        blockId: string;
-        state: SpreadsheetBlockState;
-        records: SpreadsheetRecord[];
-      }>;
-
-      if (
-        !customEvent.detail?.blockId ||
-        customEvent.detail.blockId !== activeSpreadsheet?.blockId
-      ) {
-        return;
-      }
-
-      startTransition(() => {
-        setActiveSpreadsheet(customEvent.detail.state);
-        setActiveSpreadsheetRecords(customEvent.detail.records);
-      });
-    };
-
-    window.addEventListener(
-      "research-admin-spreadsheet-updated",
-      handleSpreadsheetUpdate,
-    );
-
-    return () => {
-      window.removeEventListener(
-        "research-admin-spreadsheet-updated",
-        handleSpreadsheetUpdate,
-      );
-    };
-  }, [activeSpreadsheet?.blockId]);
 
   const canEditDocument =
     !!document &&
@@ -848,59 +672,6 @@ export function useDocumentEditor() {
     navigate("/workspaces");
   };
 
-  const insertSpreadsheetBlock = useCallback(() => {
-    if (!editor) {
-      return;
-    }
-
-    editor.chain().focus().insertSpreadsheetBlock().run();
-  }, [editor]);
-
-  const updateSpreadsheetBlock = useCallback(
-    async (patch: Partial<SpreadsheetBlockState>) => {
-      if (!activeSpreadsheet) {
-        return;
-      }
-
-      const nextSpreadsheet = {
-        ...activeSpreadsheet,
-        ...patch,
-      } as SpreadsheetBlockState;
-
-      setActiveSpreadsheet(nextSpreadsheet);
-      if (patch.config) {
-        setActiveSpreadsheetRecords((prev) => [...prev]);
-      }
-
-      patchSpreadsheetNode(activeSpreadsheet.blockId, patch);
-
-      if (documentId) {
-        await spreadsheetService.updateView(
-          documentId,
-          activeSpreadsheet.blockId,
-          patch,
-        );
-      }
-    },
-    [activeSpreadsheet, documentId, patchSpreadsheetNode],
-  );
-
-  const refreshActiveSpreadsheet = useCallback(() => {
-    if (!activeSpreadsheet) {
-      return;
-    }
-
-    void refreshSpreadsheet(activeSpreadsheet);
-  }, [activeSpreadsheet, refreshSpreadsheet]);
-
-  const exportActiveSpreadsheet = useCallback(() => {
-    if (!activeSpreadsheet) {
-      return;
-    }
-
-    downloadSpreadsheetWorkbook(activeSpreadsheet, activeSpreadsheetRecords);
-  }, [activeSpreadsheet, activeSpreadsheetRecords]);
-
   return {
     document,
     editor,
@@ -918,9 +689,6 @@ export function useDocumentEditor() {
     collaborators,
     providerStatus,
     canEditDocument,
-    activeSpreadsheet,
-    spreadsheetLoading,
-    spreadsheetError,
     fetchDocument,
     loadBodyData,
     saveBody,
@@ -938,10 +706,6 @@ export function useDocumentEditor() {
     restoreDocument,
     moveDocument,
     downloadDocument,
-    insertSpreadsheetBlock,
-    updateSpreadsheetBlock,
-    refreshActiveSpreadsheet,
-    exportActiveSpreadsheet,
     handleBack,
   };
 }

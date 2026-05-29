@@ -1,7 +1,6 @@
 export { authService } from "./auth";
 export { workspaceService } from "./workspace";
 export { documentService } from "./document";
-export { spreadsheetService } from "./spreadsheet";
 export { aclService } from "./acl";
 export { commentService } from "./comment";
 export { userService } from "./user";

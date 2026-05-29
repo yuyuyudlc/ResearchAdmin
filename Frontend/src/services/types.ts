@@ -297,59 +297,6 @@ export interface SearchRequest {
   pageSize?: number;
 }
 
-export interface SpreadsheetMetaField {
-  field: string;
-  name: string;
-  type?: "dimension" | "metric";
-  formatter?: string;
-}
-
-export interface SpreadsheetConfig {
-  rows: string[];
-  columns: string[];
-  values: string[];
-  meta: SpreadsheetMetaField[];
-}
-
-export interface SpreadsheetRecord {
-  [key: string]: string | number | null | undefined;
-}
-
-export interface SpreadsheetFilter {
-  field: string;
-  operator: "contains" | "equals" | "greater" | "less";
-  value: string;
-}
-
-export interface SpreadsheetSort {
-  field: string | null;
-  order: "asc" | "desc";
-}
-
-export interface SpreadsheetBlockState {
-  blockId: string;
-  title: string;
-  mode: "pivot" | "table";
-  config: SpreadsheetConfig;
-  filters: SpreadsheetFilter[];
-  sort: SpreadsheetSort;
-  activeMetric: string | null;
-}
-
-export interface SpreadsheetBlockResponse {
-  code?: number;
-  message?: string;
-  blockId: string;
-  title: string;
-  mode: "pivot" | "table";
-  config: SpreadsheetConfig;
-  records: SpreadsheetRecord[];
-  filters?: SpreadsheetFilter[];
-  sort?: SpreadsheetSort;
-  activeMetric?: string | null;
-  updatedAt?: string;
-}
-
 export const PERMISSION = {
   READ: 1,
   EDIT: 2,

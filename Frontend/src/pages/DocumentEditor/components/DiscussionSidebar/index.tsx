@@ -1,7 +1,5 @@
-import { useMemo } from 'react'
 import {
   Avatar,
-  Badge,
   Button,
   Divider,
   Empty,
@@ -13,7 +11,6 @@ import {
 } from 'antd'
 import Icon from '../../../../components/Icon'
 import type {
-  Collaborator,
   CommentThread,
   PendingCommentSelection,
 } from '../../hooks/commentThreads'
@@ -25,8 +22,6 @@ const { Text } = Typography
 interface Props {
   threads: CommentThread[]
   activeThreadId: string
-  collaborators: Collaborator[]
-  providerStatus: 'connecting' | 'connected' | 'disconnected'
   canEditDocument: boolean
   pendingSelection: PendingCommentSelection | null
   replying: boolean
@@ -150,8 +145,6 @@ function MessageTree({
 export default function DiscussionSidebar({
   threads,
   activeThreadId,
-  collaborators,
-  providerStatus,
   canEditDocument,
   pendingSelection,
   replying,
@@ -165,77 +158,15 @@ export default function DiscussionSidebar({
     replyingToId,
     replyContent,
     expandedResolvedIds,
-    threadStats,
     setReplyingToId,
     setReplyContent,
     toggleResolvedThread,
     clearReply,
   } = useDiscussionSidebar(threads)
 
-  const statusText = useMemo(() => {
-    if (providerStatus === 'connected') {
-      return '实时协同已连接'
-    }
-    if (providerStatus === 'connecting') {
-      return '正在连接协同服务'
-    }
-    return '协同连接暂未建立'
-  }, [providerStatus])
-
   return (
-    <aside className={styles.sidebar}>
-      <header className={styles.header}>
-        <div className={styles.titleRow}>
-          <span className={styles.title}>
-            协同讨论
-          </span>
-          <Badge status={providerStatus === 'connected' ? 'success' : 'processing'} text={statusText} />
-        </div>
-
-
-        <div className={styles.statusRow}>
-          <span className={styles.statusChip}>
-            <Icon name="comment" size={14} color="#171717" />
-            未解决 {threadStats.open}
-          </span>
-          <span className={styles.statusChip}>
-            <Icon name="check" size={14} color="#171717" />
-            已解决 {threadStats.resolved}
-          </span>
-          {pendingSelection && canEditDocument && (
-            <span className={styles.statusChip}>
-              <Icon name="locate" size={14} color="#0070f3" />
-              当前选区可用于新建或重定位
-            </span>
-          )}
-        </div>
-      </header>
-
+    <div className={styles.sidebar}>
       <div className={styles.body}>
-        <section className={styles.collaborators}>
-          <Text strong>在线协作者</Text>
-          <div className={styles.collaboratorList}>
-            {collaborators.length ? collaborators.map((member) => (
-              <div key={member.clientId} className={styles.collaborator}>
-                <Avatar
-                  size={30}
-                  src={member.avatarUrl}
-                  style={{ backgroundColor: member.color }}
-                >
-                  {member.name.slice(0, 1).toUpperCase()}
-                </Avatar>
-                <span>
-                  <Text strong>{member.name}</Text>
-                  <br />
-                  <Text type="secondary">{member.isCurrentUser ? '你' : '在线'}</Text>
-                </span>
-              </div>
-            )) : (
-              <Text type="secondary">当前只有你在线，其他成员加入后会出现在这里。</Text>
-            )}
-          </div>
-        </section>
-
         {!threads.length ? (
           <div className={styles.empty}>
             <Empty
@@ -378,6 +309,6 @@ export default function DiscussionSidebar({
           </div>
         )}
       </div>
-    </aside>
+    </div>
   )
 }

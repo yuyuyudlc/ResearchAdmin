@@ -1,13 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { EditorContent } from '@tiptap/react'
+import { DragHandle } from '@tiptap/extension-drag-handle-react'
 import {
   Alert,
   App,
   Avatar,
   Button,
-  Drawer,
   Form,
-  Grid,
   Input,
   InputNumber,
   Modal,
@@ -18,15 +17,18 @@ import {
   Tag,
   Typography,
 } from 'antd'
-
 import {
   useDocumentEditor,
   type DocumentMetaValues,
 } from './hooks/useDocumentEditor'
 import ACLModal from './components/ACLModal'
-import CommentSelectionBubble from './components/CommentSelectionBubble'
-import DocumentSidebar from './components/DocumentSidebar'
+import DiscussionSidebar from './components/DiscussionSidebar'
 import TiptapToolbar from './components/TiptapWangToolbar'
+import TableBubbleMenu from './components/TableBubbleMenu'
+import EditorContextMenu, {
+  type ContextMenuPosition,
+} from './components/EditorContextMenu'
+import { buildContextMenuItems } from './components/EditorContextMenu/contextMenuItems'
 import { PdfViewer, WordEditor, ExcelEditor, PptxViewer, AudioViewer, VideoViewer, DatasetViewer } from './file-viewers'
 import Icon from '../../components/Icon'
 import { documentService } from '../../services'
@@ -42,18 +44,21 @@ interface MoveFormValues {
 
 export default function DocumentEditorPage() {
   const { message } = App.useApp()
-  const screens = Grid.useBreakpoint()
-  const isDesktopDiscussion = !!screens.xl
   const [form] = Form.useForm<DocumentMetaValues>()
   const [moveForm] = Form.useForm<MoveFormValues>()
   const [metaOpen, setMetaOpen] = useState(false)
   const [moveOpen, setMoveOpen] = useState(false)
   const [aclOpen, setAclOpen] = useState(false)
-  const [discussionOpen, setDiscussionOpen] = useState(false)
+  const [discussionCollapsed, setDiscussionCollapsed] = useState(false)
   const [moving, setMoving] = useState(false)
   const [creatingComment, setCreatingComment] = useState(false)
   const [replying, setReplying] = useState(false)
   const [updatingThread, setUpdatingThread] = useState(false)
+  const [commentModalOpen, setCommentModalOpen] = useState(false)
+  const [commentContent, setCommentContent] = useState('')
+  const [contextMenuOpen, setContextMenuOpen] = useState(false)
+  const [contextMenuPos, setContextMenuPos] = useState<ContextMenuPosition>({ x: 0, y: 0 })
+  const discussionRef = useRef<HTMLDivElement>(null)
   const {
     document,
     editor,
@@ -71,9 +76,6 @@ export default function DocumentEditorPage() {
     collaborators,
     providerStatus,
     canEditDocument,
-    activeSpreadsheet,
-    spreadsheetLoading,
-    spreadsheetError,
     fetchDocument,
     saveBody,
     saveFileBody,
@@ -84,18 +86,98 @@ export default function DocumentEditorPage() {
     relocateThread,
     focusThread,
     setActiveThreadId,
-    setPendingSelection,
     deleteDocument,
     archiveDocument,
     restoreDocument,
     moveDocument,
     downloadDocument,
-    insertSpreadsheetBlock,
-    updateSpreadsheetBlock,
-    refreshActiveSpreadsheet,
-    exportActiveSpreadsheet,
     handleBack,
   } = useDocumentEditor()
+
+  const isRichText = document?.docType === 'rich_text'
+
+  const handleOpenCommentModal = useCallback(() => {
+    if (!editor || !pendingSelection) {
+      message.warning('请先选中需要评论的文本')
+      return
+    }
+    setCommentContent('')
+    setCommentModalOpen(true)
+  }, [editor, message, pendingSelection])
+
+  const handleCreateCommentThread = useCallback(async () => {
+    if (!commentContent.trim()) return
+    try {
+      setCreatingComment(true)
+      await createThread(commentContent)
+      setCommentModalOpen(false)
+      setCommentContent('')
+      message.success('批注线程已创建')
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : '创建批注失败')
+    } finally {
+      setCreatingComment(false)
+    }
+  }, [commentContent, createThread, message])
+
+  const handleReplyThread = useCallback(async (threadId: string, content: string, parentId: string | null) => {
+    try {
+      setReplying(true)
+      await replyToThread(threadId, content, parentId)
+      message.success('回复已发送')
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : '回复失败')
+    } finally {
+      setReplying(false)
+    }
+  }, [message, replyToThread])
+
+  const handleToggleThreadStatus = useCallback(async (threadId: string, status: 'open' | 'resolved') => {
+    try {
+      setUpdatingThread(true)
+      await setThreadStatus(threadId, status)
+      message.success(status === 'resolved' ? '线程已标记为已解决' : '线程已重新打开')
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : '状态更新失败')
+    } finally {
+      setUpdatingThread(false)
+    }
+  }, [message, setThreadStatus])
+
+  const handleRelocateThread = useCallback(async (threadId: string) => {
+    try {
+      setUpdatingThread(true)
+      await relocateThread(threadId)
+      message.success('批注锚点已重新定位')
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : '重新定位失败')
+    } finally {
+      setUpdatingThread(false)
+    }
+  }, [message, relocateThread])
+
+  const handleSelectThread = useCallback((threadId: string) => {
+    setActiveThreadId(threadId)
+    focusThread(threadId)
+    setDiscussionCollapsed(false)
+  }, [focusThread, setActiveThreadId])
+
+  const handleEditorContextMenu = useCallback((event: React.MouseEvent) => {
+    if (!isRichText) return
+    event.preventDefault()
+    setContextMenuPos({ x: event.clientX, y: event.clientY })
+    setContextMenuOpen(true)
+  }, [isRichText])
+
+  const contextMenuItems = useMemo(() => {
+    const hasSelection = !editor?.state.selection.empty
+    return buildContextMenuItems(
+      editor,
+      hasSelection ?? false,
+      handleOpenCommentModal,
+      canEditDocument,
+    )
+  }, [editor, canEditDocument, handleOpenCommentModal])
 
   useEffect(() => {
     if (document && metaOpen) {
@@ -114,12 +196,6 @@ export default function DocumentEditorPage() {
       })
     }
   }, [document, moveForm, moveOpen])
-
-  useEffect(() => {
-    if (isDesktopDiscussion) {
-      setDiscussionOpen(false)
-    }
-  }, [isDesktopDiscussion])
 
   if (loading) {
     return (
@@ -211,9 +287,7 @@ export default function DocumentEditorPage() {
   }
 
   const handleDownload = async () => {
-    if (!document?.id) {
-      return
-    }
+    if (!document?.id) return
     try {
       message.loading({ content: '正在准备下载...', key: 'downloading', duration: 0 })
       const data = await downloadDocument()
@@ -238,99 +312,14 @@ export default function DocumentEditorPage() {
   }
 
   const handleSaveFileBody = async (data: Uint8Array) => {
-    if (!bodyType) {
-      throw new Error('无法确定文件类型')
-    }
+    if (!bodyType) throw new Error('无法确定文件类型')
     await saveFileBody(data, bodyType)
   }
 
-  const handleCreateCommentThread = async (content: string) => {
-    try {
-      setCreatingComment(true)
-      await createThread(content)
-      message.success('批注线程已创建')
-      if (!isDesktopDiscussion) {
-        setDiscussionOpen(true)
-      }
-    } catch (err) {
-      message.error(err instanceof Error ? err.message : '创建批注失败')
-    } finally {
-      setCreatingComment(false)
-    }
-  }
-
-  const handleReplyThread = async (threadId: string, content: string, parentId: string | null) => {
-    try {
-      setReplying(true)
-      await replyToThread(threadId, content, parentId)
-      message.success('回复已发送')
-    } catch (err) {
-      message.error(err instanceof Error ? err.message : '回复失败')
-    } finally {
-      setReplying(false)
-    }
-  }
-
-  const handleToggleThreadStatus = async (threadId: string, status: 'open' | 'resolved') => {
-    try {
-      setUpdatingThread(true)
-      await setThreadStatus(threadId, status)
-      message.success(status === 'resolved' ? '线程已标记为已解决' : '线程已重新打开')
-    } catch (err) {
-      message.error(err instanceof Error ? err.message : '状态更新失败')
-    } finally {
-      setUpdatingThread(false)
-    }
-  }
-
-  const handleRelocateThread = async (threadId: string) => {
-    try {
-      setUpdatingThread(true)
-      await relocateThread(threadId)
-      message.success('批注锚点已重新定位')
-    } catch (err) {
-      message.error(err instanceof Error ? err.message : '重新定位失败')
-    } finally {
-      setUpdatingThread(false)
-    }
-  }
-
-  const handleSelectThread = (threadId: string) => {
-    setActiveThreadId(threadId)
-    focusThread(threadId)
-    if (!isDesktopDiscussion) {
-      setDiscussionOpen(true)
-    }
-  }
-
-  const renderDocumentSidebar = () => (
-    <DocumentSidebar
-      threads={threads}
-      activeThreadId={activeThreadId}
-      collaborators={collaborators}
-      providerStatus={providerStatus}
-      canEditDocument={canEditDocument}
-      pendingSelection={pendingSelection}
-      replying={replying}
-      updatingThread={updatingThread}
-      onSelectThread={handleSelectThread}
-      onReply={handleReplyThread}
-      onToggleThreadStatus={handleToggleThreadStatus}
-      onRelocateThread={handleRelocateThread}
-      spreadsheet={activeSpreadsheet}
-      spreadsheetLoading={spreadsheetLoading}
-      spreadsheetError={spreadsheetError}
-      onInsertSpreadsheetBlock={insertSpreadsheetBlock}
-      onPatchSpreadsheetBlock={updateSpreadsheetBlock}
-      onRefreshSpreadsheet={refreshActiveSpreadsheet}
-      onExportSpreadsheet={exportActiveSpreadsheet}
-    />
-  )
-
   const isArchived = document?.status === 'archived'
-  const isRichText = document?.docType === 'rich_text'
   const isFile = document?.docType === 'file'
   const hasViewer = isFile && bodyType && bodyType !== 'yjs_state'
+
   const onlineUserContent = (
     <div className={styles.onlinePopover}>
       {collaborators.length === 0 ? (
@@ -384,49 +373,21 @@ export default function DocumentEditorPage() {
     }
 
     switch (bodyType) {
-      case 'pdf':
-        return <PdfViewer data={bodyData} />
-      case 'word':
-        return (
-          <WordEditor
-            data={bodyData}
-            filename={document?.sourceStorageKey}
-            onSave={handleSaveFileBody}
-            saving={saving}
-          />
-        )
-      case 'excel':
-        return (
-          <ExcelEditor
-            data={bodyData}
-            onSave={handleSaveFileBody}
-            saving={saving}
-          />
-        )
-      case 'ppt':
-        return <PptxViewer data={bodyData} filename={document?.sourceStorageKey} />
-      case 'audio':
-        return <AudioViewer data={bodyData} filename={document?.sourceStorageKey} />
-      case 'video':
-        return <VideoViewer data={bodyData} filename={document?.sourceStorageKey} />
-      case 'dataset':
-        return <DatasetViewer data={bodyData} filename={document?.sourceStorageKey} />
+      case 'pdf': return <PdfViewer data={bodyData} />
+      case 'word': return <WordEditor data={bodyData} filename={document?.sourceStorageKey} onSave={handleSaveFileBody} saving={saving} />
+      case 'excel': return <ExcelEditor data={bodyData} onSave={handleSaveFileBody} saving={saving} />
+      case 'ppt': return <PptxViewer data={bodyData} filename={document?.sourceStorageKey} />
+      case 'audio': return <AudioViewer data={bodyData} filename={document?.sourceStorageKey} />
+      case 'video': return <VideoViewer data={bodyData} filename={document?.sourceStorageKey} />
+      case 'dataset': return <DatasetViewer data={bodyData} filename={document?.sourceStorageKey} />
       default:
         return (
           <div className={styles.fileShell}>
             <Result
               icon={<Icon name="file" size={72} style={{ color: '#1677ff' }} />}
               title={document?.title || '未命名附件'}
-              subTitle={
-                document?.summary
-                  ? `文件描述：${document.summary}`
-                  : '当前文件为附件格式，不支持在线预览。请下载后查看或使用专业软件进行编辑。'
-              }
-              extra={
-                <Button type="primary" size="large" onClick={handleDownload}>
-                  下载附件源文件
-                </Button>
-              }
+              subTitle={document?.summary ? `文件描述：${document.summary}` : '当前文件为附件格式，不支持在线预览。请下载后查看或使用专业软件进行编辑。'}
+              extra={<Button type="primary" size="large" onClick={handleDownload}>下载附件源文件</Button>}
             />
           </div>
         )
@@ -459,48 +420,29 @@ export default function DocumentEditorPage() {
 
         <Space wrap>
           {isRichText && (
-            <Button
-              type="primary"
-              loading={saving}
-              onClick={() =>
-                saveBody().then(() => message.success('文档已保存'))
-              }
-            >
+            <Button type="primary" loading={saving} onClick={() => saveBody().then(() => message.success('文档已保存'))}>
               保存
-            </Button>
-          )}
-          {isRichText && (
-            <Button
-              icon={<Icon name="table" size={14} />}
-              onClick={insertSpreadsheetBlock}
-              disabled={!canEditDocument}
-            >
-              插入多维表格
             </Button>
           )}
           <Button
             icon={<Icon name="discussion" size={14} />}
-            onClick={() => setDiscussionOpen(true)}
+            onClick={() => {
+              setDiscussionCollapsed(false)
+              setTimeout(() => discussionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+            }}
           >
             讨论 {threads.length > 0 ? `(${threads.length})` : ''}
           </Button>
           <Button onClick={() => setMetaOpen(true)}>文档信息</Button>
           <Button onClick={() => setMoveOpen(true)}>移动</Button>
-          <Button
-            disabled={!document || !canManage(document.permissionBit)}
-            onClick={() => setAclOpen(true)}
-          >
-            权限
-          </Button>
+          <Button disabled={!document || !canManage(document.permissionBit)} onClick={() => setAclOpen(true)}>权限</Button>
           <Button onClick={handleDownload}>下载</Button>
           {isArchived ? (
             <Button onClick={handleRestore}>恢复</Button>
           ) : (
             <Button onClick={confirmArchive}>归档</Button>
           )}
-          <Button danger onClick={confirmDelete}>
-            删除
-          </Button>
+          <Button danger onClick={confirmDelete}>删除</Button>
         </Space>
       </div>
 
@@ -509,42 +451,52 @@ export default function DocumentEditorPage() {
       )}
 
       {isRichText ? (
-        <>
-          <div className={styles.contentShell}>
-            <div className={styles.editorColumn}>
-              <div className={styles.editorShell}>
-                <div className="tiptap-toolbar-wrapper">
-                  <TiptapToolbar editor={editor} disabled={!canEditDocument} />
-                </div>
-                <EditorContent editor={editor} />
-                <CommentSelectionBubble
-                  selection={pendingSelection}
-                  creating={creatingComment}
-                  onSubmit={handleCreateCommentThread}
-                  onCancel={() => setPendingSelection(null)}
-                />
+        <div className={styles.contentShell}>
+          <div className={styles.editorColumn}>
+            <div
+              className={styles.editorShell}
+              onContextMenu={handleEditorContextMenu}
+            >
+              <div className="tiptap-toolbar-wrapper">
+                <TiptapToolbar editor={editor} disabled={!canEditDocument} />
               </div>
+              <EditorContent editor={editor} />
+              {editor && (
+                <DragHandle editor={editor}>
+                  <Icon name="drag" size={14} className={styles.dragHandleIcon} />
+                </DragHandle>
+              )}
+              <TableBubbleMenu editor={editor} disabled={!canEditDocument} />
             </div>
 
-            {isDesktopDiscussion && (
-              <div className={styles.sidebarColumn}>
-                {renderDocumentSidebar()}
+            <div ref={discussionRef} className={styles.discussionSection}>
+              <div
+                className={styles.discussionToggle}
+                onClick={() => setDiscussionCollapsed((v) => !v)}
+              >
+                <Icon name={discussionCollapsed ? 'caret-right' : 'caret-down'} size={14} />
+                <span>协同讨论</span>
+                <span className={styles.discussionBadge}>
+                  {threads.filter((t) => t.status === 'open').length}
+                </span>
               </div>
-            )}
+              {!discussionCollapsed && (
+                <DiscussionSidebar
+                  threads={threads}
+                  activeThreadId={activeThreadId}
+                  canEditDocument={canEditDocument}
+                  pendingSelection={pendingSelection}
+                  replying={replying}
+                  updatingThread={updatingThread}
+                  onSelectThread={handleSelectThread}
+                  onReply={handleReplyThread}
+                  onToggleThreadStatus={handleToggleThreadStatus}
+                  onRelocateThread={handleRelocateThread}
+                />
+              )}
+            </div>
           </div>
-
-          {!isDesktopDiscussion && (
-            <Drawer
-              title="文档侧栏"
-              placement="right"
-              open={discussionOpen}
-              onClose={() => setDiscussionOpen(false)}
-              size="large"
-            >
-              {renderDocumentSidebar()}
-            </Drawer>
-          )}
-        </>
+        </div>
       ) : hasViewer ? (
         renderFileViewer()
       ) : (
@@ -552,19 +504,43 @@ export default function DocumentEditorPage() {
           <Result
             icon={<Icon name="file" size={72} style={{ color: '#1677ff' }} />}
             title={document?.title || '未命名附件'}
-            subTitle={
-              document?.summary
-                ? `文件描述：${document.summary}`
-                : '当前文件为附件格式，不支持在线预览。请下载后查看或使用专业软件进行编辑。'
-            }
-            extra={
-              <Button type="primary" size="large" onClick={handleDownload}>
-                下载附件源文件
-              </Button>
-            }
+            subTitle={document?.summary ? `文件描述：${document.summary}` : '当前文件为附件格式，不支持在线预览。请下载后查看或使用专业软件进行编辑。'}
+            extra={<Button type="primary" size="large" onClick={handleDownload}>下载附件源文件</Button>}
           />
         </div>
       )}
+
+      <EditorContextMenu
+        open={contextMenuOpen}
+        position={contextMenuPos}
+        items={contextMenuItems}
+        onClose={() => setContextMenuOpen(false)}
+      />
+
+      <Modal
+        title="发起评论"
+        open={commentModalOpen}
+        onCancel={() => setCommentModalOpen(false)}
+        onOk={handleCreateCommentThread}
+        okText="发起讨论"
+        cancelText="取消"
+        confirmLoading={creatingComment}
+        destroyOnHidden
+      >
+        {pendingSelection && (
+          <blockquote style={{ background: '#f5f5f5', padding: '8px 12px', borderRadius: 6, marginBottom: 16, color: '#595959' }}>
+            "{pendingSelection.text.slice(0, 120)}"
+          </blockquote>
+        )}
+        <Input.TextArea
+          rows={4}
+          value={commentContent}
+          onChange={(e) => setCommentContent(e.target.value)}
+          placeholder="输入你的批注内容，团队成员会围绕这段文字展开讨论。"
+          maxLength={600}
+          autoFocus
+        />
+      </Modal>
 
       <Modal
         title="文档信息"
@@ -577,11 +553,7 @@ export default function DocumentEditorPage() {
         cancelText="取消"
       >
         <Form form={form} layout="vertical" requiredMark={false}>
-          <Form.Item
-            label="标题"
-            name="title"
-            rules={[{ required: true, message: '请输入文档标题' }]}
-          >
+          <Form.Item label="标题" name="title" rules={[{ required: true, message: '请输入文档标题' }]}>
             <Input placeholder="请输入文档标题" />
           </Form.Item>
           <Form.Item label="摘要" name="summary">
@@ -601,11 +573,7 @@ export default function DocumentEditorPage() {
         cancelText="取消"
       >
         <Form form={moveForm} layout="vertical" requiredMark={false}>
-          <Form.Item
-            label="目标父节点 ID"
-            name="parentId"
-            tooltip="移动到根目录请填空字符串，否则填目标文件夹/文档 ID"
-          >
+          <Form.Item label="目标父节点 ID" name="parentId" tooltip="移动到根目录请填空字符串，否则填目标文件夹/文档 ID">
             <Input placeholder="为空表示根目录" />
           </Form.Item>
           <Form.Item label="排序" name="sortOrder">
