@@ -208,6 +208,58 @@
                 }
             }
         },
+        "/documents/home": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "按 scope 返回当前用户的首页文档列表。scope=mine 返回我创建的，scope=recent 返回最近打开，scope=favorite 返回我收藏的。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "documents"
+                ],
+                "summary": "获取首页文档列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "列表范围：mine/recent/favorite",
+                        "name": "scope",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "返回数量，默认 20，最大 50",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
         "/documents/{documentId}": {
             "get": {
                 "security": [
@@ -684,6 +736,132 @@
                 }
             }
         },
+        "/documents/{documentId}/body": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "返回文档的 yjs 状态或文件二进制数据。",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "documents"
+                ],
+                "summary": "获取文档正文",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "文档 ID",
+                        "name": "documentId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "上传文档正文（yjs 二进制状态 或 文件）。权限：EDIT。",
+                "consumes": [
+                    "application/octet-stream"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "documents"
+                ],
+                "summary": "更新文档正文",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "文档 ID",
+                        "name": "documentId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "正文类型（yjs_state/pdf/word/video）",
+                        "name": "X-Body-Type",
+                        "in": "header"
+                    },
+                    {
+                        "description": "正文二进制",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
         "/documents/{documentId}/download": {
             "get": {
                 "security": [
@@ -717,6 +895,108 @@
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/documents/{documentId}/favorite": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "当前用户收藏指定文档。要求当前用户至少拥有该文档 READ 权限，重复收藏保持幂等。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "documents"
+                ],
+                "summary": "收藏文档",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "文档 ID",
+                        "name": "documentId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "当前用户取消收藏指定文档。要求当前用户至少拥有该文档 READ 权限。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "documents"
+                ],
+                "summary": "取消收藏文档",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "文档 ID",
+                        "name": "documentId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/response.Body"
                         }
@@ -903,6 +1183,70 @@
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/search": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "根据用户名、邮箱或显示名称模糊搜索非禁用的用户。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "模糊搜索用户",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "搜索关键字",
+                        "name": "q",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/service.UserResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/response.Body"
                         }
@@ -1765,16 +2109,24 @@
             ],
             "properties": {
                 "inherit": {
-                    "type": "boolean"
+                    "type": "boolean",
+                    "example": true
                 },
                 "permissionBit": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 3
                 },
                 "subjectId": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "00000000-0000-0000-0000-000000000000"
                 },
                 "subjectType": {
-                    "$ref": "#/definitions/domain.ACLSubjectType"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.ACLSubjectType"
+                        }
+                    ],
+                    "example": "user"
                 }
             }
         },
@@ -1785,19 +2137,28 @@
             ],
             "properties": {
                 "docType": {
-                    "$ref": "#/definitions/domain.DocumentType"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.DocumentType"
+                        }
+                    ],
+                    "example": "rich_text"
                 },
                 "parentId": {
-                    "type": "string"
+                    "type": "string",
+                    "example": ""
                 },
                 "sourceStorageKey": {
-                    "type": "string"
+                    "type": "string",
+                    "example": ""
                 },
                 "summary": {
-                    "type": "string"
+                    "type": "string",
+                    "example": ""
                 },
                 "title": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "需求文档"
                 }
             }
         },
@@ -1808,10 +2169,12 @@
             ],
             "properties": {
                 "description": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "项目资料"
                 },
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "研发空间"
                 }
             }
         },
@@ -1823,10 +2186,16 @@
             ],
             "properties": {
                 "role": {
-                    "$ref": "#/definitions/domain.WorkspaceMemberRole"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.WorkspaceMemberRole"
+                        }
+                    ],
+                    "example": "member"
                 },
                 "userId": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "00000000-0000-0000-0000-000000000000"
                 }
             }
         },
@@ -1834,10 +2203,12 @@
             "type": "object",
             "properties": {
                 "parentId": {
-                    "type": "string"
+                    "type": "string",
+                    "example": ""
                 },
                 "sortOrder": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1000
                 }
             }
         },
@@ -1845,10 +2216,12 @@
             "type": "object",
             "properties": {
                 "inherit": {
-                    "type": "boolean"
+                    "type": "boolean",
+                    "example": true
                 },
                 "permissionBit": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1
                 }
             }
         },
@@ -1856,13 +2229,16 @@
             "type": "object",
             "properties": {
                 "sourceStorageKey": {
-                    "type": "string"
+                    "type": "string",
+                    "example": ""
                 },
                 "summary": {
-                    "type": "string"
+                    "type": "string",
+                    "example": ""
                 },
                 "title": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "需求文档"
                 }
             }
         },
@@ -1873,7 +2249,12 @@
             ],
             "properties": {
                 "role": {
-                    "$ref": "#/definitions/domain.WorkspaceMemberRole"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.WorkspaceMemberRole"
+                        }
+                    ],
+                    "example": "member"
                 }
             }
         },
@@ -1899,6 +2280,44 @@
                 },
                 "data": {},
                 "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.UserResponse": {
+            "type": "object",
+            "properties": {
+                "avatarUrl": {
+                    "type": "string"
+                },
+                "displayName": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "organization": {
+                    "type": "string"
+                },
+                "organizationId": {
+                    "type": "string"
+                },
+                "professionalTitle": {
+                    "$ref": "#/definitions/domain.ProfessionalTitle"
+                },
+                "signature": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "supervisor": {
+                    "type": "string"
+                },
+                "username": {
                     "type": "string"
                 }
             }

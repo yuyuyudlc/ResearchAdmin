@@ -2,7 +2,9 @@
   min-height: calc(100vh - 64px);
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background:
+    radial-gradient(circle at top left, rgba(0, 112, 243, 0.05), transparent 22%),
+    linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%);
 }
 
 .center {
@@ -18,7 +20,8 @@
   gap: 16px;
   padding: 20px 32px;
   border-bottom: 1px solid #ebebeb;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
 }
 
 .titleBlock {
@@ -39,22 +42,276 @@
   margin: 16px 32px 0;
 }
 
-.editorShell {
+.contentShell {
   flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.editorColumn {
+  min-width: 0;
+  flex: 1;
+}
+
+.editorShell {
+  position: relative;
   width: min(920px, calc(100% - 48px));
   margin: 32px auto 64px;
+  border: 1px solid rgba(23, 23, 23, 0.08);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 22px 50px rgba(23, 23, 23, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.editorShell :global(.tiptap-toolbar-wrapper) {
+  padding: 16px 48px 12px;
+  border-bottom: 1px solid rgba(23, 23, 23, 0.06);
 }
 
 .editorShell :global(.tiptap-editor-content) {
-  min-height: 560px;
+  min-height: 640px;
+  padding: 40px 48px 60px;
   outline: none;
   color: #171717;
   font-size: 16px;
-  line-height: 1.75;
+  line-height: 1.8;
+}
+
+.editorShell :global(.tiptap h1) {
+  font-size: 2em;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0 0 16px;
+}
+
+.editorShell :global(.tiptap h2) {
+  font-size: 1.5em;
+  font-weight: 600;
+  line-height: 1.35;
+  margin: 0 0 12px;
+}
+
+.editorShell :global(.tiptap h3) {
+  font-size: 1.25em;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0 0 10px;
 }
 
 .editorShell :global(.tiptap p) {
-  margin: 0 0 12px;
+  margin: 0 0 14px;
+}
+
+.editorShell :global(.tiptap ul),
+.editorShell :global(.tiptap ol) {
+  padding-left: 1.5em;
+  margin: 0 0 14px;
+}
+
+.editorShell :global(.tiptap li) {
+  margin-bottom: 4px;
+}
+
+.editorShell :global(.tiptap blockquote) {
+  border-left: 3px solid #1677ff;
+  padding: 8px 16px;
+  margin: 0 0 14px;
+  background: rgba(22, 119, 255, 0.04);
+  border-radius: 0 6px 6px 0;
+}
+
+.editorShell :global(.tiptap hr) {
+  border: none;
+  border-top: 1px solid #e0e0e0;
+  margin: 24px 0;
+}
+
+.editorShell :global(.tiptap code) {
+  background: rgba(23, 23, 23, 0.06);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace;
+  font-size: 0.9em;
+  color: #d63384;
+}
+
+.editorShell :global(.tiptap pre) {
+  background: #1e1e1e;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 0 0 14px;
+  overflow-x: auto;
+}
+
+.editorShell :global(.tiptap pre code) {
+  background: none;
+  color: #d4d4d4;
+  padding: 0;
+  font-size: 14px;
+  border-radius: 0;
+}
+
+.editorShell :global(.tiptap a) {
+  color: #1677ff;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.editorShell :global(.tiptap a:hover) {
+  color: #4096ff;
+}
+
+.editorShell :global(.tiptap mark) {
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.editorShell :global(.tiptap img) {
+  max-width: 100%;
+  border-radius: 8px;
+}
+
+/* Task list (checklist) styles */
+.editorShell :global(.tiptap ul[data-type='taskList']) {
+  list-style: none;
+  padding-left: 0;
+}
+
+.editorShell :global(.tiptap ul[data-type='taskList'] li) {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.editorShell :global(.tiptap ul[data-type='taskList'] li > label) {
+  flex-shrink: 0;
+  margin-top: 0.3em;
+}
+
+.editorShell :global(.tiptap ul[data-type='taskList'] li > label input[type='checkbox']) {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #1677ff;
+}
+
+.editorShell :global(.tiptap ul[data-type='taskList'] li > div) {
+  flex: 1;
+}
+
+/* Table styles */
+.editorShell :global(.tiptap table) {
+  border-collapse: collapse;
+  margin: 0 0 14px;
+  width: 100%;
+  table-layout: fixed;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.editorShell :global(.tiptap table td),
+.editorShell :global(.tiptap table th) {
+  border: 1px solid #e0e0e0;
+  padding: 8px 12px;
+  min-width: 60px;
+  vertical-align: top;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.editorShell :global(.tiptap table th) {
+  background: #f5f5f5;
+  font-weight: 600;
+  text-align: left;
+}
+
+.editorShell :global(.tiptap table .selectedCell) {
+  background: rgba(22, 119, 255, 0.08);
+}
+
+.editorShell :global(.tiptap .column-resize-handle) {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  bottom: 0;
+  width: 4px;
+  background: #1677ff;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  cursor: col-resize;
+  pointer-events: auto;
+}
+
+.editorShell :global(.tiptap table:hover .column-resize-handle) {
+  opacity: 0.3;
+}
+
+.editorShell :global(.tiptap table .column-resize-handle:hover) {
+  opacity: 1;
+}
+
+.editorShell :global(.tiptap sup) {
+  font-size: 0.75em;
+  vertical-align: super;
+}
+
+.editorShell :global(.tiptap sub) {
+  font-size: 0.75em;
+  vertical-align: sub;
+}
+
+.editorShell :global(.comment-thread-mark) {
+  padding: 0 0.1em;
+  border-radius: 0.35em;
+  background: rgba(0, 112, 243, 0.12);
+  box-decoration-break: clone;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.editorShell :global(.comment-thread-mark[data-active-thread='true']) {
+  background: rgba(0, 112, 243, 0.22);
+  box-shadow: 0 0 0 1px rgba(0, 112, 243, 0.18);
+}
+
+.editorShell :global(.collaboration-cursor__caret),
+.editorShell :global(.collaboration-carets__caret) {
+  border-left: 2px solid currentColor;
+  margin-left: -1px;
+  margin-right: -1px;
+  position: relative;
+  pointer-events: none;
+}
+
+.editorShell :global(.collaboration-cursor__label),
+.editorShell :global(.collaboration-carets__label) {
+  position: absolute;
+  top: -1.6em;
+  left: -2px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 500;
+  background-color: currentColor;
+  color: #ffffff;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0.8;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.editorShell :global(.collaboration-cursor__selection),
+.editorShell :global(.collaboration-carets__selection) {
+  background-color: currentColor;
+  opacity: 0.1;
+}
+
+
+.sidebarColumn {
+  width: 460px;
+  border-left: 1px solid rgba(23, 23, 23, 0.05);
 }
 
 .fileShell {
@@ -65,14 +322,48 @@
   background: #fafafa;
 }
 
+.onlinePopover {
+  max-width: 260px;
+}
+
+.onlineUser {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #1f1f1f;
+}
+
+.onlineAvatar {
+  border: 1px solid rgba(23, 23, 23, 0.08);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+
+@media (max-width: 1279px) {
+  .editorShell {
+    width: calc(100% - 40px);
+  }
+}
+
 @media (max-width: 760px) {
   .toolbar {
     flex-direction: column;
     padding: 20px;
   }
 
+  .alert {
+    margin: 16px 20px 0;
+  }
+
   .editorShell {
-    width: calc(100% - 32px);
-    margin-top: 24px;
+    width: calc(100% - 20px);
+    margin-top: 20px;
+    border-radius: 22px;
+  }
+
+  .editorShell :global(.tiptap-editor-content) {
+    min-height: 520px;
+    padding: 26px 20px 36px;
   }
 }

@@ -19,12 +19,17 @@ export function useDocumentACL(documentId: string | undefined) {
     setLoading(true)
     setError('')
     try {
-      const [listRes, permRes] = await Promise.all([
-        aclService.list(documentId),
-        aclService.myPermission(documentId).catch(() => null),
-      ])
-      setItems(listRes.data.items)
-      if (permRes) setPermission(permRes.data)
+      const permRes = await aclService.myPermission(documentId).catch(() => null)
+      if (permRes) {
+        setPermission(permRes.data)
+      }
+
+      if (permRes?.data.canManage) {
+        const listRes = await aclService.list(documentId)
+        setItems(listRes.data.items)
+      } else {
+        setItems([])
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : '加载权限失败')
     } finally {

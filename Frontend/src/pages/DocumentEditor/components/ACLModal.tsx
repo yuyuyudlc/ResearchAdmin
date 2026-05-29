@@ -1,11 +1,11 @@
 import { useEffect, useState, startTransition } from 'react'
 import {
+  Alert,
   App,
   Button,
   Checkbox,
   Form,
   Input,
-  List,
   Modal,
   Select,
   Space,
@@ -61,7 +61,7 @@ export default function ACLModal({ open, documentId, onClose }: Props) {
   const [searchedUsers, setSearchedUsers] = useState<User[]>([])
   const [searchingUsers, setSearchingUsers] = useState(false)
 
-  const { items, loading, submitting, refresh, createACL, updateACL, removeACL } =
+  const { items, permission, loading, submitting, error, refresh, createACL, updateACL, removeACL } =
     useDocumentACL(documentId)
 
   const handleUserSearch = async (query: string) => {
@@ -152,6 +152,16 @@ export default function ACLModal({ open, documentId, onClose }: Props) {
       destroyOnHidden
     >
       <Spin spinning={loading}>
+        {error && <Alert style={{ marginBottom: 16 }} type="warning" showIcon message={error} />}
+
+        {permission && !permission.canManage ? (
+          <Alert
+            type="info"
+            showIcon
+            message="当前账号没有该文档的权限管理能力，无法查看或修改 ACL 配置。"
+          />
+        ) : (
+          <>
         <Form form={form} layout="vertical" requiredMark={false}>
           <Space wrap>
             <Form.Item name="subjectType" label="授权对象" style={{ minWidth: 160 }}>
@@ -242,16 +252,35 @@ export default function ACLModal({ open, documentId, onClose }: Props) {
           </Space>
         </Form>
 
-        <List
-          style={{ marginTop: 16 }}
-          dataSource={items}
-          locale={{ emptyText: '暂无权限配置（默认继承父级）' }}
-          renderItem={(item) => (
-            <List.Item
-              actions={[
+        <div style={{ marginTop: 16 }}>
+          {items.length ? items.map((item) => (
+            <div
+              key={item.id}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: 16,
+                padding: '14px 0',
+                borderBottom: '1px solid #f0f0f0',
+              }}
+            >
+              <div>
+                <Space>
+                  <Tag>{item.subjectType}</Tag>
+                  <Text strong>{item.subjectId || '所有人'}</Text>
+                </Space>
+                <div style={{ marginTop: 8 }}>
+                  <Space size={4} separator={<span>·</span>}>
+                    <Text type="secondary">权限: {bitLabel(item.permissionBit)}</Text>
+                    <Text type="secondary">{item.inherit ? '继承' : '不继承'}</Text>
+                  </Space>
+                </div>
+              </div>
+
+              <Space>
                 <Button type="link" onClick={() => openEdit(item)}>
                   编辑
-                </Button>,
+                </Button>
                 <Button
                   type="link"
                   danger
@@ -260,26 +289,15 @@ export default function ACLModal({ open, documentId, onClose }: Props) {
                   }
                 >
                   删除
-                </Button>,
-              ]}
-            >
-              <List.Item.Meta
-                title={
-                  <Space>
-                    <Tag>{item.subjectType}</Tag>
-                    <Text strong>{item.subjectId || '所有人'}</Text>
-                  </Space>
-                }
-                description={
-                  <Space size={4} split={<span>·</span>}>
-                    <Text type="secondary">权限: {bitLabel(item.permissionBit)}</Text>
-                    <Text type="secondary">{item.inherit ? '继承' : '不继承'}</Text>
-                  </Space>
-                }
-              />
-            </List.Item>
+                </Button>
+              </Space>
+            </div>
+          )) : (
+            <Text type="secondary">暂无权限配置（默认继承父级）</Text>
           )}
-        />
+        </div>
+          </>
+        )}
       </Spin>
     </Modal>
   )

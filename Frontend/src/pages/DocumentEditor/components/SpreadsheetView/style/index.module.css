@@ -1,0 +1,64 @@
+.pivotShell,
+.tableShell {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.pivotSummary,
+.tableSummary {
+  padding: 12px 16px;
+  border: 1px solid rgba(23, 23, 23, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.sheetWrapper {
+  min-height: 560px;
+  padding: 12px;
+  border: 1px solid rgba(23, 23, 23, 0.08);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.92);
+  overflow: hidden;
+}
+
+.table {
+  border: 1px solid rgba(23, 23, 23, 0.08);
+  border-radius: 20px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.empty {
+  min-height: 420px;
+  padding: 48px 24px;
+  border: 1px dashed rgba(23, 23, 23, 0.12);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.editCell {
+  position: relative;
+  min-width: 120px;
+}
+
+.cellInput {
+  min-width: 100%;
+  padding-inline: 0;
+}
+
+.cellSaving {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  color: #4d4d4d;
+}
+
+.cellError {
+  display: block;
+  margin-top: 4px;
+  color: #ee0000;
+  font-size: 12px;
+  line-height: 1.4;
+}

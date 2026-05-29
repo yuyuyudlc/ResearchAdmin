@@ -115,6 +115,23 @@ type DocumentBody struct {
 	UpdatedAt  time.Time `json:"updated_at"`
 }
 
+type DocumentAccess struct {
+	ID         string    `gorm:"type:char(36);primaryKey" json:"id"`
+	UserID     string    `gorm:"type:char(36);not null;uniqueIndex:idx_document_access_user_doc;index" json:"user_id"`
+	DocumentID string    `gorm:"type:char(36);not null;uniqueIndex:idx_document_access_user_doc;index" json:"document_id"`
+	OpenedAt   time.Time `gorm:"not null;index" json:"opened_at"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
+type DocumentFavorite struct {
+	ID         string    `gorm:"type:char(36);primaryKey" json:"id"`
+	UserID     string    `gorm:"type:char(36);not null;uniqueIndex:idx_document_favorite_user_doc;index" json:"user_id"`
+	DocumentID string    `gorm:"type:char(36);not null;uniqueIndex:idx_document_favorite_user_doc;index" json:"document_id"`
+	CreatedAt  time.Time `gorm:"index" json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
 func (b *DocumentBody) BeforeCreate(_ *gorm.DB) error {
 	return assignUUID(&b.ID)
 }
@@ -137,6 +154,14 @@ func (d *Document) BeforeCreate(_ *gorm.DB) error {
 
 func (a *DocACL) BeforeCreate(_ *gorm.DB) error {
 	return assignUUID(&a.ID)
+}
+
+func (a *DocumentAccess) BeforeCreate(_ *gorm.DB) error {
+	return assignUUID(&a.ID)
+}
+
+func (f *DocumentFavorite) BeforeCreate(_ *gorm.DB) error {
+	return assignUUID(&f.ID)
 }
 
 func (DocACL) TableName() string {

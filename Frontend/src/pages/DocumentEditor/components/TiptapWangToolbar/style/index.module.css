@@ -1,0 +1,177 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  background: #fafafa;
+  border: 1px solid #e8e8e8;
+  border-radius: 10px;
+  user-select: none;
+  flex-wrap: wrap;
+  gap: 2px;
+  overflow-x: auto;
+}
+
+.toolbar::-webkit-scrollbar {
+  height: 4px;
+}
+
+.toolbar::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 2px;
+}
+
+.btn {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px !important;
+  color: #595959;
+  transition: background 0.15s ease, color 0.15s ease;
+  padding: 0 !important;
+}
+
+.btn:disabled {
+  opacity: 0.35;
+}
+
+.btn:hover:not(:disabled) {
+  background: #ebebeb !important;
+  color: #171717;
+}
+
+.active {
+  background: rgba(0, 0, 0, 0.07) !important;
+  color: #171717;
+}
+
+.divider {
+  display: inline-block;
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: #e0e0e0;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.headingBtn {
+  min-width: 56px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-radius: 6px !important;
+  padding: 0 8px !important;
+  color: #595959;
+  font-size: 12px;
+  font-weight: 500;
+  transition: background 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.headingBtn:hover:not(:disabled) {
+  background: #ebebeb !important;
+  color: #171717;
+}
+
+.headingBtn:disabled {
+  opacity: 0.35;
+}
+
+.headingLabel {
+  white-space: nowrap;
+}
+
+.headingCaret {
+  margin-left: 2px;
+  flex-shrink: 0;
+}
+
+.colorPreset {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.colorSwatch {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  flex-shrink: 0;
+}
+
+.colorLabel {
+  font-size: 12px;
+  color: #595959;
+}
+
+.dropdownActiveItem {
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
+.linkModalBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.linkField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.linkLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+}
+
+.bubbleMenu {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.bubbleBtn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  color: #595959;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  font-size: 13px;
+}
+
+.bubbleBtn:hover {
+  background: #f0f0f0;
+  color: #171717;
+}
+
+.bubbleBtnActive {
+  background: rgba(0, 0, 0, 0.07);
+  color: #171717;
+}
+
+.bubbleDivider {
+  width: 1px;
+  height: 16px;
+  background: #e0e0e0;
+  margin: 0 2px;
+}

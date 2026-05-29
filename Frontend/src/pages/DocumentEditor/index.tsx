@@ -3,11 +3,15 @@ import { EditorContent } from '@tiptap/react'
 import {
   Alert,
   App,
+  Avatar,
   Button,
+  Drawer,
   Form,
+  Grid,
   Input,
   InputNumber,
   Modal,
+  Popover,
   Result,
   Space,
   Spin,
@@ -20,9 +24,13 @@ import {
   type DocumentMetaValues,
 } from './hooks/useDocumentEditor'
 import ACLModal from './components/ACLModal'
+import CommentSelectionBubble from './components/CommentSelectionBubble'
+import DocumentSidebar from './components/DocumentSidebar'
+import TiptapToolbar from './components/TiptapWangToolbar'
 import { PdfViewer, WordEditor, ExcelEditor, PptxViewer, AudioViewer, VideoViewer, DatasetViewer } from './file-viewers'
 import Icon from '../../components/Icon'
 import { documentService } from '../../services'
+import { canManage } from '../../services/types'
 import styles from './style/index.module.css'
 
 const { Text, Title } = Typography
@@ -34,12 +42,18 @@ interface MoveFormValues {
 
 export default function DocumentEditorPage() {
   const { message } = App.useApp()
+  const screens = Grid.useBreakpoint()
+  const isDesktopDiscussion = !!screens.xl
   const [form] = Form.useForm<DocumentMetaValues>()
   const [moveForm] = Form.useForm<MoveFormValues>()
   const [metaOpen, setMetaOpen] = useState(false)
   const [moveOpen, setMoveOpen] = useState(false)
   const [aclOpen, setAclOpen] = useState(false)
+  const [discussionOpen, setDiscussionOpen] = useState(false)
   const [moving, setMoving] = useState(false)
+  const [creatingComment, setCreatingComment] = useState(false)
+  const [replying, setReplying] = useState(false)
+  const [updatingThread, setUpdatingThread] = useState(false)
   const {
     document,
     editor,
@@ -51,15 +65,35 @@ export default function DocumentEditorPage() {
     updating,
     lastSaved,
     error,
+    threads,
+    activeThreadId,
+    pendingSelection,
+    collaborators,
+    providerStatus,
+    canEditDocument,
+    activeSpreadsheet,
+    spreadsheetLoading,
+    spreadsheetError,
     fetchDocument,
     saveBody,
     saveFileBody,
     updateMeta,
+    createThread,
+    replyToThread,
+    setThreadStatus,
+    relocateThread,
+    focusThread,
+    setActiveThreadId,
+    setPendingSelection,
     deleteDocument,
     archiveDocument,
     restoreDocument,
     moveDocument,
     downloadDocument,
+    insertSpreadsheetBlock,
+    updateSpreadsheetBlock,
+    refreshActiveSpreadsheet,
+    exportActiveSpreadsheet,
     handleBack,
   } = useDocumentEditor()
 
@@ -81,10 +115,16 @@ export default function DocumentEditorPage() {
     }
   }, [document, moveForm, moveOpen])
 
+  useEffect(() => {
+    if (isDesktopDiscussion) {
+      setDiscussionOpen(false)
+    }
+  }, [isDesktopDiscussion])
+
   if (loading) {
     return (
       <div className={styles.center}>
-        <Spin tip="加载文档中..." />
+        <Spin description="加载文档中..." />
       </div>
     )
   }
@@ -110,7 +150,7 @@ export default function DocumentEditorPage() {
   if (!editor && document?.docType === 'rich_text') {
     return (
       <div className={styles.center}>
-        <Spin tip="初始化编辑器..." />
+        <Spin description="初始化编辑器..." />
       </div>
     )
   }
@@ -171,7 +211,9 @@ export default function DocumentEditorPage() {
   }
 
   const handleDownload = async () => {
-    if (!document?.id) return
+    if (!document?.id) {
+      return
+    }
     try {
       message.loading({ content: '正在准备下载...', key: 'downloading', duration: 0 })
       const data = await downloadDocument()
@@ -202,16 +244,125 @@ export default function DocumentEditorPage() {
     await saveFileBody(data, bodyType)
   }
 
+  const handleCreateCommentThread = async (content: string) => {
+    try {
+      setCreatingComment(true)
+      await createThread(content)
+      message.success('批注线程已创建')
+      if (!isDesktopDiscussion) {
+        setDiscussionOpen(true)
+      }
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : '创建批注失败')
+    } finally {
+      setCreatingComment(false)
+    }
+  }
+
+  const handleReplyThread = async (threadId: string, content: string, parentId: string | null) => {
+    try {
+      setReplying(true)
+      await replyToThread(threadId, content, parentId)
+      message.success('回复已发送')
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : '回复失败')
+    } finally {
+      setReplying(false)
+    }
+  }
+
+  const handleToggleThreadStatus = async (threadId: string, status: 'open' | 'resolved') => {
+    try {
+      setUpdatingThread(true)
+      await setThreadStatus(threadId, status)
+      message.success(status === 'resolved' ? '线程已标记为已解决' : '线程已重新打开')
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : '状态更新失败')
+    } finally {
+      setUpdatingThread(false)
+    }
+  }
+
+  const handleRelocateThread = async (threadId: string) => {
+    try {
+      setUpdatingThread(true)
+      await relocateThread(threadId)
+      message.success('批注锚点已重新定位')
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : '重新定位失败')
+    } finally {
+      setUpdatingThread(false)
+    }
+  }
+
+  const handleSelectThread = (threadId: string) => {
+    setActiveThreadId(threadId)
+    focusThread(threadId)
+    if (!isDesktopDiscussion) {
+      setDiscussionOpen(true)
+    }
+  }
+
+  const renderDocumentSidebar = () => (
+    <DocumentSidebar
+      threads={threads}
+      activeThreadId={activeThreadId}
+      collaborators={collaborators}
+      providerStatus={providerStatus}
+      canEditDocument={canEditDocument}
+      pendingSelection={pendingSelection}
+      replying={replying}
+      updatingThread={updatingThread}
+      onSelectThread={handleSelectThread}
+      onReply={handleReplyThread}
+      onToggleThreadStatus={handleToggleThreadStatus}
+      onRelocateThread={handleRelocateThread}
+      spreadsheet={activeSpreadsheet}
+      spreadsheetLoading={spreadsheetLoading}
+      spreadsheetError={spreadsheetError}
+      onInsertSpreadsheetBlock={insertSpreadsheetBlock}
+      onPatchSpreadsheetBlock={updateSpreadsheetBlock}
+      onRefreshSpreadsheet={refreshActiveSpreadsheet}
+      onExportSpreadsheet={exportActiveSpreadsheet}
+    />
+  )
+
   const isArchived = document?.status === 'archived'
   const isRichText = document?.docType === 'rich_text'
   const isFile = document?.docType === 'file'
   const hasViewer = isFile && bodyType && bodyType !== 'yjs_state'
+  const onlineUserContent = (
+    <div className={styles.onlinePopover}>
+      {collaborators.length === 0 ? (
+        <Text type="secondary">暂无在线协作者</Text>
+      ) : (
+        <Space direction="vertical" size={4}>
+          {collaborators.map((collaborator) => (
+            <span key={collaborator.clientId} className={styles.onlineUser}>
+              <Avatar
+                size={20}
+                src={collaborator.avatarUrl}
+                className={styles.onlineAvatar}
+                style={{ backgroundColor: collaborator.color }}
+              >
+                {collaborator.name.trim().slice(0, 1).toUpperCase()}
+              </Avatar>
+              <span>
+                {collaborator.name}
+                {collaborator.isCurrentUser ? ' (你)' : ''}
+              </span>
+            </span>
+          ))}
+        </Space>
+      )}
+    </div>
+  )
 
   const renderFileViewer = () => {
     if (bodyLoading) {
       return (
         <div className={styles.center} style={{ minHeight: 400 }}>
-          <Spin tip="加载文件内容..." />
+          <Spin description="加载文件内容..." />
         </div>
       )
     }
@@ -295,6 +446,11 @@ export default function DocumentEditorPage() {
           <Space size={8} wrap>
             <Tag>{isRichText ? '富文本' : bodyType ? bodyType.toUpperCase() : document?.docType || '文档'}</Tag>
             {isArchived && <Tag color="orange">已归档</Tag>}
+            {providerStatus === 'connected' && isRichText && (
+              <Popover content={onlineUserContent} title="在线成员" placement="bottomLeft">
+                <Tag color="blue">在线 {collaborators.length} 人</Tag>
+              </Popover>
+            )}
             {lastSaved && (
               <Text type="secondary">上次保存: {lastSaved.toLocaleTimeString()}</Text>
             )}
@@ -313,9 +469,29 @@ export default function DocumentEditorPage() {
               保存
             </Button>
           )}
+          {isRichText && (
+            <Button
+              icon={<Icon name="table" size={14} />}
+              onClick={insertSpreadsheetBlock}
+              disabled={!canEditDocument}
+            >
+              插入多维表格
+            </Button>
+          )}
+          <Button
+            icon={<Icon name="discussion" size={14} />}
+            onClick={() => setDiscussionOpen(true)}
+          >
+            讨论 {threads.length > 0 ? `(${threads.length})` : ''}
+          </Button>
           <Button onClick={() => setMetaOpen(true)}>文档信息</Button>
           <Button onClick={() => setMoveOpen(true)}>移动</Button>
-          <Button onClick={() => setAclOpen(true)}>权限</Button>
+          <Button
+            disabled={!document || !canManage(document.permissionBit)}
+            onClick={() => setAclOpen(true)}
+          >
+            权限
+          </Button>
           <Button onClick={handleDownload}>下载</Button>
           {isArchived ? (
             <Button onClick={handleRestore}>恢复</Button>
@@ -333,9 +509,42 @@ export default function DocumentEditorPage() {
       )}
 
       {isRichText ? (
-        <div className={styles.editorShell}>
-          <EditorContent editor={editor} />
-        </div>
+        <>
+          <div className={styles.contentShell}>
+            <div className={styles.editorColumn}>
+              <div className={styles.editorShell}>
+                <div className="tiptap-toolbar-wrapper">
+                  <TiptapToolbar editor={editor} disabled={!canEditDocument} />
+                </div>
+                <EditorContent editor={editor} />
+                <CommentSelectionBubble
+                  selection={pendingSelection}
+                  creating={creatingComment}
+                  onSubmit={handleCreateCommentThread}
+                  onCancel={() => setPendingSelection(null)}
+                />
+              </div>
+            </div>
+
+            {isDesktopDiscussion && (
+              <div className={styles.sidebarColumn}>
+                {renderDocumentSidebar()}
+              </div>
+            )}
+          </div>
+
+          {!isDesktopDiscussion && (
+            <Drawer
+              title="文档侧栏"
+              placement="right"
+              open={discussionOpen}
+              onClose={() => setDiscussionOpen(false)}
+              size="large"
+            >
+              {renderDocumentSidebar()}
+            </Drawer>
+          )}
+        </>
       ) : hasViewer ? (
         renderFileViewer()
       ) : (

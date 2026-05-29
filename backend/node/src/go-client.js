@@ -9,7 +9,7 @@ export class GoClient {
         headers: {
           'Content-Type': 'application/octet-stream',
           'X-Body-Type': 'yjs_state',
-          'Authorization': `Bearer ${config.goInternalToken}`,
+          'X-Internal-Token': config.goInternalToken,
         },
         body: state,
       });

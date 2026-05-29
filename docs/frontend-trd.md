@@ -50,31 +50,37 @@ Frontend/src/
 系统最核心的功能组件是富文本编辑器。以下是其初始化与协作逻辑：
 
 ### 3.1 本地 YDoc 与 Tiptap 绑定
+
 在 `useDocumentEditor.ts` 钩子中，编辑器通过 Collaboration 插件绑定本地 `Y.Doc` 对象：
+
 ```typescript
-import { useEditor } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
-import Collaboration from '@tiptap/extension-collaboration'
-import * as Y from 'yjs'
+import { useEditor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Collaboration from "@tiptap/extension-collaboration";
+import * as Y from "yjs";
 
-const ydoc = useMemo(() => new Y.Doc(), [documentId])
+const ydoc = useMemo(() => new Y.Doc(), [documentId]);
 
-const editor = useEditor({
-  extensions: [
-    StarterKit.configure({ undoRedo: false }), // 协同场景下禁用默认撤销/重做，由 Yjs 统一接管
-    Collaboration.configure({
-      document: ydoc,
-    }),
-  ],
-  editorProps: {
-    attributes: {
-      class: 'tiptap-editor-content', // 绑定公共样式类以控制富文本排版
+const editor = useEditor(
+  {
+    extensions: [
+      StarterKit.configure({ undoRedo: false }), // 协同场景下禁用默认撤销/重做，由 Yjs 统一接管
+      Collaboration.configure({
+        document: ydoc,
+      }),
+    ],
+    editorProps: {
+      attributes: {
+        class: "tiptap-editor-content", // 绑定公共样式类以控制富文本排版
+      },
     },
   },
-}, [ydoc])
+  [ydoc],
+);
 ```
 
 ### 3.2 现有数据流（HTTP 单向模式）
+
 1. **加载期**：调用 `documentService.getBody(documentId)` 获取后端的二进制 state 包，然后利用 `Y.applyUpdate(ydoc, new Uint8Array(bodyRes))` 还原文字排版。
 2. **保存期**：用户点击“保存”按钮，通过 `Y.encodeStateAsUpdate(ydoc)` 拿到本地的二进制快照，打包通过 `documentService.putBody` 传给 Go 后端。
 
@@ -98,31 +104,35 @@ const editor = useEditor({
 为彻底盘活协同服务，前端在未来迭代中必须重点重构以下两个部分：
 
 ### 5.1 补全 `y-websocket` 整合，开启实时协同
+
 - **第一步：加入依赖**：在 `Frontend/package.json` 中声明 `"y-websocket": "^2.0.0"` 并进行安装。
 - **第二步：整合 WebSocket 通信**：
   在 `useDocumentEditor.ts` 中引入 `WebsocketProvider`。挂载时不仅从 Go 后端拉取初始数据（用于兜底网络延迟），而且建立与 Node 协同服务的 WebSocket 链路：
+
   ```typescript
-  import { WebsocketProvider } from 'y-websocket'
-  
+  import { WebsocketProvider } from "y-websocket";
+
   useEffect(() => {
-    if (!documentId) return
-    
+    if (!documentId) return;
+
     // 建立通信桥梁
     const provider = new WebsocketProvider(
-      'ws://localhost:3001',
+      "ws://localhost:3001",
       `documents/${documentId}`,
-      ydoc
-    )
-    
+      ydoc,
+    );
+
     return () => {
-      provider.destroy()
-    }
-  }, [documentId, ydoc])
+      provider.destroy();
+    };
+  }, [documentId, ydoc]);
   ```
+
 - **第三步：协同光标与感知 (Awareness)**：
-  集成 `@tiptap/extension-collaboration-cursor`，并从 `provider.awareness` 中同步其他协作者在文档中的动态光标位置与显示名称，于编辑器顶部展示当前在线人数。
+  集成 `@tiptap/extension-collaboration-caret`，并从 `provider.awareness` 中同步其他协作者在文档中的动态光标位置与显示名称，于编辑器顶部展示当前在线人数。
 
 ### 5.2 共享授权弹窗 (ACLModal) 的用户搜索功能（已实现）
+
 - **实现方案**：在 `ACLModal.tsx` 中，引入动态搜索下拉组件，摆脱了以前用户必须手动复制粘贴 36 位 UUID 的痛点。
 - **具体实现细节**：
   - **接口对接**：在 `Frontend/src/services/user.ts` 中封装了 `userService.search(q)`，请求 `GET /api/v1/users/search?q=xxx` 接口。
@@ -132,22 +142,24 @@ const editor = useEditor({
   - **编辑回显处理**：在编辑模式下，若当前授权的 `subjectId` 不在搜索列表中，程序会自动补接一个 `用户 ID: ${editing.subjectId}` 的 Fallback 选项，避免渲染为空，极大提升了用户体验与健壮性。
 
 ### 5.3 附件型文档 (File Attachments) 的更新与覆盖保存指引（前端开发特供）
+
 为了让前端开发人员能以最简洁、低门槛的方式接入附件修改并保存功能，以下提供了标准的业务步骤、核心接口及参考代码。
 
 #### 5.3.1 核心对接流程
+
 对于常规附件（如 Excel、Word、PDF），因为无法直接在网页中打字，编辑与更新需要遵循“下载原件 -> 本地用专业软件编辑 -> 重新上传并保存覆盖”的流程：
 
 ```mermaid
 sequenceDiagram
     participant FE as 前端界面 (Client)
     participant BE as 后端服务 (Go Server)
-    
+
     Note over FE: 用户点击 "修改/更新附件" 按钮
     FE->>FE: 弹出本地文件选择器 (限制格式)
     Note over FE: 选择最新的本地编辑文件
     FE->>BE: 1. PUT /api/v1/documents/:documentId/body (直接传输文件 ArrayBuffer)
     BE-->>FE: 返回 { code: 0, message: "success", data: { size: 1024 } }
-    
+
     FE->>BE: 2. PATCH /api/v1/documents/:documentId (更新文件名与元数据)
     Note over FE: { title: "新文件名", sourceStorageKey: "新文件名" }
     BE-->>FE: 返回更新后的元数据成功
@@ -157,66 +169,89 @@ sequenceDiagram
 #### 5.3.2 前端对接代码实例
 
 ##### 1. 前端 API 封装 (`src/services/document.ts`)
+
 我们已经在 `documentService` 中为您封装好了上传二进制的方法 `putBody`，如果您是更新文件，只需要这样调用：
+
 ```typescript
-import { documentService } from './document'
+import { documentService } from "./document";
 
 // 1. 保存/替换文件二进制正文
 // data 可以是 input type="file" 拿到的 File 对象转成 ArrayBuffer 或 Uint8Array
 // ext 对应文件扩展名，例如: 'word', 'pdf' 等 (不可传 'yjs_state')
-async function uploadNewFileContent(documentId: string, fileData: ArrayBuffer, ext: string) {
+async function uploadNewFileContent(
+  documentId: string,
+  fileData: ArrayBuffer,
+  ext: string,
+) {
   return documentService.putBody(documentId, new Uint8Array(fileData), {
-    'X-Body-Type': ext 
-  })
+    "X-Body-Type": ext,
+  });
 }
 
 // 2. 同步更新文档的文件名元数据 (可选，若文件名发生变更)
 async function updateFileMeta(documentId: string, newFilename: string) {
   return documentService.update(documentId, {
     title: newFilename,
-    sourceStorageKey: newFilename
-  })
+    sourceStorageKey: newFilename,
+  });
 }
 ```
 
 ##### 2. 界面层接入建议 (`src/pages/DocumentEditor/index.tsx`)
+
 您可以在 `DocumentEditorPage` 附件结果页面 (`styles.fileShell`) 的 `extra` 动作区域，并列增设一个 `<Upload>` 按钮：
+
 ```tsx
-import { Upload, Button, message } from 'antd'
+import { Upload, Button, message } from "antd";
 
 // 在页面组件内声明更新逻辑
 const handleUploadNewVersion = async (file: File) => {
   try {
-    message.loading({ content: '正在上传新版本...', key: 'uploading', duration: 0 })
-    
+    message.loading({
+      content: "正在上传新版本...",
+      key: "uploading",
+      duration: 0,
+    });
+
     // 读取文件为 ArrayBuffer
-    const arrayBuffer = await file.arrayBuffer()
-    
+    const arrayBuffer = await file.arrayBuffer();
+
     // 获取后缀名 (去掉 .)
-    const ext = file.name.split('.').pop() || ''
-    
+    const ext = file.name.split(".").pop() || "";
+
     // 步骤 A: 上传并替换后端二进制正文
-    await documentService.putBody(document.id, new Uint8Array(arrayBuffer), { 'X-Body-Type': ext }) 
-    
+    await documentService.putBody(document.id, new Uint8Array(arrayBuffer), {
+      "X-Body-Type": ext,
+    });
+
     // 步骤 B: 修正文件名元数据
     await documentService.update(document.id, {
       title: file.name,
-      sourceStorageKey: file.name
-    })
-    
-    message.success({ content: '附件新版本已成功覆盖并保存！', key: 'uploading' })
-    
+      sourceStorageKey: file.name,
+    });
+
+    message.success({
+      content: "附件新版本已成功覆盖并保存！",
+      key: "uploading",
+    });
+
     // 刷新页面状态以获取最新文件详情
-    fetchDocument() 
+    fetchDocument();
   } catch (err) {
-    message.error({ content: '覆盖保存失败，请重试', key: 'uploading' })
+    message.error({ content: "覆盖保存失败，请重试", key: "uploading" });
   }
-}
+};
 
 // 界面呈现
-<Upload beforeUpload={(file) => { handleUploadNewVersion(file); return false; }} showUploadList={false}>
+<Upload
+  beforeUpload={(file) => {
+    handleUploadNewVersion(file);
+    return false;
+  }}
+  showUploadList={false}
+>
   <Button size="large">上传本地最新版覆盖</Button>
-</Upload>
+</Upload>;
 ```
 
 只要按此结构拼装请求，就可以极其安全、完美地通过 `PUT` 和 `PATCH` 接口完成附件更新与替换保存工作。傻瓜式调用，请勿漏写 `X-Body-Type` 标头以防止后端类型校验报错。

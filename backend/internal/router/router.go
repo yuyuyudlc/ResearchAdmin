@@ -17,6 +17,7 @@ func New(
 	adminUserHandler *handler.AdminUserHandler,
 	adminOrgHandler *handler.AdminOrganizationHandler,
 	tokenManager *auth.TokenManager,
+	internalToken string,
 ) *gin.Engine {
 	r := gin.Default()
 
@@ -27,12 +28,12 @@ func New(
 	authGroup.POST("/register", authHandler.Register)
 
 	protectedAuthGroup := authGroup.Group("")
-	protectedAuthGroup.Use(middleware.JWTAuth(tokenManager))
+	protectedAuthGroup.Use(middleware.JWTAuth(tokenManager, internalToken))
 	protectedAuthGroup.PUT("/password", authHandler.ChangePassword)
 	protectedAuthGroup.PUT("/profile", authHandler.UpdateProfile)
 
 	api := r.Group("/api/v1")
-	api.Use(middleware.JWTAuth(tokenManager))
+	api.Use(middleware.JWTAuth(tokenManager, internalToken))
 	api.GET("/users/search", authHandler.SearchUsers)
 	api.POST("/workspaces", documentHandler.CreateWorkspace)
 	api.GET("/workspaces", documentHandler.ListWorkspaces)
@@ -46,9 +47,12 @@ func New(
 	api.POST("/workspaces/:workspaceId/documents", documentHandler.CreateDocument)
 	api.POST("/workspaces/:workspaceId/documents/upload", documentHandler.UploadDocument)
 
+	api.GET("/documents/home", documentHandler.ListHomeDocuments)
 	api.GET("/documents/:documentId", documentHandler.GetDocument)
 	api.PATCH("/documents/:documentId", documentHandler.UpdateDocument)
 	api.POST("/documents/:documentId/move", documentHandler.MoveDocument)
+	api.POST("/documents/:documentId/favorite", documentHandler.FavoriteDocument)
+	api.DELETE("/documents/:documentId/favorite", documentHandler.UnfavoriteDocument)
 	api.POST("/documents/:documentId/archive", documentHandler.ArchiveDocument)
 	api.POST("/documents/:documentId/restore", documentHandler.RestoreDocument)
 	api.DELETE("/documents/:documentId", documentHandler.DeleteDocument)
@@ -60,6 +64,13 @@ func New(
 	api.GET("/documents/:documentId/my-permission", documentHandler.MyPermission)
 	api.GET("/documents/:documentId/body", documentHandler.GetBody)
 	api.PUT("/documents/:documentId/body", documentHandler.PutBody)
+	api.GET("/documents/:documentId/spreadsheets/:blockId", documentHandler.GetSpreadsheetBlock)
+	api.PATCH("/documents/:documentId/spreadsheets/:blockId", documentHandler.UpdateSpreadsheetBlock)
+	api.POST("/documents/:documentId/spreadsheets/:blockId/records", documentHandler.CreateSpreadsheetRecord)
+	api.PATCH("/documents/:documentId/spreadsheets/:blockId/cell", documentHandler.UpdateSpreadsheetCell)
+	api.GET("/documents/:documentId/spreadsheets/:blockId/body", documentHandler.GetSpreadsheetBody)
+	api.PUT("/documents/:documentId/spreadsheets/:blockId/body", documentHandler.PutSpreadsheetBody)
+	api.GET("/documents/:documentId/spreadsheets/:blockId/export", documentHandler.ExportSpreadsheetBlock)
 
 	// 管理员后台：需 JWT + AdminOnly
 	adminGroup := api.Group("/admin")
